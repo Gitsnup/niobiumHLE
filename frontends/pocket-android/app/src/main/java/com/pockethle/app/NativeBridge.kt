@@ -31,6 +31,7 @@ object NativeBridge {
     @JvmStatic external fun importZip(libraryRoot: String, zipPath: String): String
     /** Imports a RAR archive containing a Pocket PC game. */
     @JvmStatic external fun importRar(libraryRoot: String, rarPath: String): String
+    @JvmStatic external fun importXap(libraryRoot: String, xapPath: String): String
     /** Imports a standalone ARM Pocket PC executable. */
     @JvmStatic external fun importExe(libraryRoot: String, exePath: String): String
 

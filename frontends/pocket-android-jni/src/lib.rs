@@ -167,6 +167,33 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importRar<'local>(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_pockethle_app_NativeBridge_importXap<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    library_root: JString<'local>,
+    xap_path: JString<'local>,
+) -> jstring {
+    init_logger();
+    let root = match jstring_to_path(&mut env, library_root) {
+        Some(p) => p,
+        None => return new_jstring(&env, error_json("missing library root")),
+    };
+    let xap = match jstring_to_path(&mut env, xap_path) {
+        Some(p) => p,
+        None => return new_jstring(&env, error_json("missing xap path")),
+    };
+    let result = (|| -> anyhow::Result<String> {
+        let mut lib = Library::open(&root)?;
+        let entry = lib.import_xap(&xap)?;
+        Ok(serde_json::to_string(&entry)?)
+    })();
+    match result {
+        Ok(j) => new_jstring(&env, j),
+        Err(e) => new_jstring(&env, error_json(&format!("importXap: {e:#}"))),
+    }
+}
+
+#[no_mangle]
 pub extern "system" fn Java_com_pockethle_app_NativeBridge_importExe<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,

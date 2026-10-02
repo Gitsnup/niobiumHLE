@@ -32,5 +32,5 @@ cargo test --workspace
 cargo clippy --workspace --all-targets
 ```
 
-Do not commit unless asked, and never push directly to the target branch —
-changes go through a Pull Request.
+Do not commit unless asked. Push directly to `main` when the owner asks for
+it — separate PR branches are no longer the default workflow here.

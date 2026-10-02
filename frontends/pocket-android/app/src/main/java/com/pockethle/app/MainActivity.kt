@@ -191,6 +191,8 @@ class MainActivity : AppCompatActivity() {
         val isExe = signature[0] == 'M'.code.toByte() && signature[1] == 'Z'.code.toByte()
 
         return when {
+            file.extension.equals("xap", ignoreCase = true) ->
+                NativeBridge.importXap(rootDir, file.absolutePath)
             isZip -> NativeBridge.importZip(rootDir, file.absolutePath)
             isCab -> NativeBridge.importCab(rootDir, file.absolutePath)
             isExe -> NativeBridge.importExe(rootDir, file.absolutePath)
@@ -199,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             file.extension.equals("zip", ignoreCase = true) -> NativeBridge.importZip(rootDir, file.absolutePath)
             file.extension.equals("cab", ignoreCase = true) -> NativeBridge.importCab(rootDir, file.absolutePath)
             file.extension.equals("exe", ignoreCase = true) -> NativeBridge.importExe(rootDir, file.absolutePath)
-            else -> error("Unsupported file: choose a RAR, ZIP, CAB, or ARM EXE, or a Windows installer")
+            else -> error("Unsupported file: choose a RAR, ZIP, CAB, XAP, or ARM EXE, or a Windows installer")
         }
     }
 
