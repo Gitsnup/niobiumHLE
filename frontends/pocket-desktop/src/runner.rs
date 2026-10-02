@@ -1,7 +1,7 @@
 //! Background runner that drives [`pocket_core::Emulator`] for the
 //! desktop GUI.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -31,6 +31,39 @@ impl Runner {
         Self::default()
     }
 
+    /// Run a managed image through the `pockethle` CLI's managed-runtime
+    /// path (`--managed-duration 0` keeps it alive until the game exits).
+    ///
+    /// The GUI drives the ARM emulator directly and has no managed runtime
+    /// of its own; the CLI already knows how to pick a runtime, point
+    /// `MONO_PATH` at the compatibility assemblies and host a display, so
+    /// delegating keeps one managed implementation instead of forking it.
+    fn run_managed_via_cli(exe: &Path, mut summary_lines: Vec<String>) -> RunOutcome {
+        summary_lines.push("Managed image: delegating to the pockethle CLI runtime.".to_string());
+        let cli = std::env::current_exe()
+            .ok()
+            .and_then(|path| path.parent().map(|dir| dir.join("pockethle")))
+            .filter(|path| path.exists())
+            .unwrap_or_else(|| PathBuf::from("pockethle"));
+        let status = std::process::Command::new(&cli)
+            .arg("run")
+            .arg(exe)
+            .arg("--managed-duration")
+            .arg("0")
+            .status();
+        match status {
+            Ok(status) if status.success() => {
+                summary_lines.push("Managed run finished cleanly.".to_string());
+            }
+            Ok(status) => summary_lines.push(format!("Managed run exited with {status}")),
+            Err(e) => summary_lines.push(format!("Managed run failed: {e}")),
+        }
+        RunOutcome {
+            summary: summary_lines.join("\n"),
+            framebuffer: None,
+        }
+    }
+
     pub fn run_game(
         &self,
         library_root: PathBuf,
@@ -42,9 +75,23 @@ impl Runner {
         let exe = game.launch_path(&library_root);
         let mut summary_lines = vec![format!("Game: {}", game.display_name)];
 
-        let machine = pocket_core::pe::load_file(&exe)
+        let loaded = pocket_core::pe::load_file(&exe).ok();
+        let machine = loaded
+            .as_ref()
             .map(|image| image.machine)
             .unwrap_or(pocket_core::pe::machine::ARM);
+
+        // Managed images (Windows Phone `.xap` imports, .NET Compact
+        // Framework games) do not execute on the ARM core — the CLI fronts
+        // them through a host .NET runtime instead. Delegate so the GUI gets
+        // the same managed path the CLI gives, rather than trying to
+        // ARM-emulate an x86 CLR image.
+        if loaded
+            .as_ref()
+            .is_some_and(|image| image.managed_runtime.is_some())
+        {
+            return Self::run_managed_via_cli(&exe, summary_lines);
+        }
         // The Stub CPU does not interpret instructions — it is a
         // trace-only harness that exists so loader-level code can be
         // unit-tested without pulling in unicorn-engine. Trying to

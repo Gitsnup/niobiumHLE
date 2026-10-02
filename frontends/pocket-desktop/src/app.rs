@@ -372,7 +372,7 @@ impl PocketLauncher {
                 self.screen = Screen::Settings;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Import .CAB / .ZIP / .RAR...").clicked() {
+                if ui.button("Import .CAB / .ZIP / .RAR / .XAP...").clicked() {
                     self.spawn_import_dialog();
                 }
             });
@@ -391,9 +391,9 @@ impl PocketLauncher {
                         .color(Color32::from_gray(160)),
                 );
                 ui.add_space(8.0);
-                ui.label("Click \"Import .CAB / .ZIP / .RAR...\" to add a Pocket PC game.");
+                ui.label("Click \"Import .CAB / .ZIP / .RAR / .XAP...\" to add a Pocket PC game.");
                 ui.add_space(20.0);
-                if ui.button("Import .CAB / .ZIP / .RAR...").clicked() {
+                if ui.button("Import .CAB / .ZIP / .RAR / .XAP...").clicked() {
                     self.spawn_import_dialog();
                 }
             });
@@ -1150,13 +1150,15 @@ impl PocketLauncher {
                 // the `.exe` instead, rather than seeing nothing in
                 // the picker at all.
                 .add_filter(
-                    "Pocket PC game (.rar / .cab / .zip / .exe / .dll)",
+                    "Pocket PC game (.rar / .cab / .zip / .xap / .exe / .dll)",
                     &[
-                        "rar", "RAR", "cab", "CAB", "zip", "ZIP", "exe", "EXE", "dll", "DLL",
+                        "rar", "RAR", "cab", "CAB", "zip", "ZIP", "xap", "XAP", "exe", "EXE",
+                        "dll", "DLL",
                     ],
                 )
                 .add_filter("Cabinet archive", &["cab", "CAB"])
                 .add_filter("Zip archive", &["zip", "ZIP"])
+                .add_filter("Windows Phone package", &["xap", "XAP"])
                 .add_filter("ARM PE executable", &["exe", "EXE"]);
             if let Some(d) = last_dir {
                 dialog = dialog.set_directory(d);
@@ -1181,6 +1183,7 @@ impl PocketLauncher {
                     Some("rar") => lib.import_rar(&path),
                     Some("cab") => lib.import_cab(&path),
                     Some("zip") => lib.import_zip(&path),
+                    Some("xap") => lib.import_xap(&path),
                     // Treat anything else (`.exe`, no extension, …)
                     // as a raw ARM PE32. `import_exe` rejects it
                     // with a clear error if the machine type is
