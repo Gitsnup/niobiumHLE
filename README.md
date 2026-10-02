@@ -28,7 +28,7 @@ SPDX-License-Identifier: Apache-2.0 OR MIT
 ---
 
 > [!NOTE]
-> PocketHLE targets native ARM Windows CE / Windows Mobile executables packaged in `.CAB` archives. It is experimental software: compatibility, performance and input behavior vary by game and host platform.
+> PocketHLE targets native ARM Windows CE / Windows Mobile executables packaged in `.CAB` archives. Windows Phone `.XAP` packages (managed Silverlight / XNA images) are imported and identified, but the Silverlight application model they need to run is not implemented, so they cannot be played yet. It is experimental software: compatibility, performance and input behavior vary by game and host platform.
 
 > [!WARNING]
 > PocketHLE is developed for research and educational purposes. It does not include Microsoft system files, firmware or game data. Use only legally obtained game copies and archives.
