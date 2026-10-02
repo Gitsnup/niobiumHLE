@@ -115,7 +115,7 @@ frontends/  pocket-cli      pocket-desktop (egui)   pocket-android-jni
 | `pocket-winceapi` | The guest-facing API surface. One module per emulated DLL; registers handlers into `WinCeDispatcher`. |
 | `pocket-gles` | Software OpenGL ES 1.x: geometry, rasterizer, textures, fixed-point and matrix math. Host-side only — knows nothing about guest memory. |
 | `pocket-core` | Wires loader + CPU + kernel + dispatcher into an `Emulator` the frontends drive. |
-| `pocket-library` | Game catalog: identifies titles, tracks install state and per-game metadata. |
+| `pocket-library` | Game catalog: identifies titles, tracks install state and per-game metadata. Its `xap` module parses Windows Phone `WMAppManifest.xml` / `AppManifest.xaml` — shared by the CLI's `archive.rs` (run path) and `import_xap` (library path). |
 
 Frontends: `pocket-cli` (headless, scriptable — the one to use for
 debugging), `pocket-desktop` (egui), `pocket-android-jni` plus the Kotlin

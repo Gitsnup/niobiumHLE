@@ -34,6 +34,7 @@ use thiserror::Error;
 
 pub mod keybindings;
 pub mod save_data;
+pub mod xap;
 
 pub use keybindings::{GuestButton, KeyBinding, KeyBindings};
 
@@ -67,6 +68,11 @@ pub enum LibraryError {
          and any DLLs next to it are picked up automatically"
     )]
     IsLibrary(String),
+    #[error(
+        "`{0}` is not a Windows Phone XAP package: WMAppManifest.xml \
+         or the entry-point assembly it names is missing"
+    )]
+    NotXap(String),
 }
 
 fn default_schema_version() -> u32 {
@@ -1229,6 +1235,110 @@ impl Library {
         self.commit_entry(&id, entry)
     }
 
+    /// Import a Windows Phone `.xap` Silverlight application package.
+    ///
+    /// A `.xap` is a ZIP of managed IL assemblies rather than a
+    /// cabinet of native ARM binaries, so the executable the entry
+    /// records is the `EntryPointAssembly` named by `AppManifest.xaml`
+    /// and the display metadata comes from `WMAppManifest.xml` —
+    /// nothing here looks for ARM code. The icon is the package's
+    /// `PhoneGameThumb.png`, the tile thumbnail Windows Phone showed
+    /// in the app list.
+    pub fn import_xap(&mut self, xap_path: impl AsRef<Path>) -> Result<&GameEntry, LibraryError> {
+        let xap_path = xap_path.as_ref();
+        let source_name = xap_path
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown.xap".to_string());
+        let id = sanitize_id(xap_path.file_stem().map(|s| s.to_string_lossy()).as_deref());
+        if id.is_empty() {
+            return Err(LibraryError::InvalidId(source_name));
+        }
+
+        let game_dir = self.root.join("games").join(&id);
+        if game_dir.exists() {
+            fs::remove_dir_all(&game_dir)?;
+        }
+        let extracted_dir = game_dir.join("extracted");
+        fs::create_dir_all(&extracted_dir)?;
+
+        let f = fs::File::open(xap_path)?;
+        let mut archive = zip::ZipArchive::new(f)?;
+        let mut written: Vec<PathBuf> = Vec::with_capacity(archive.len());
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i)?;
+            let Some(rel) = entry.enclosed_name().map(Path::to_path_buf) else {
+                continue;
+            };
+            if rel.as_os_str().is_empty() {
+                continue;
+            }
+            let dest = extracted_dir.join(&rel);
+            if entry.is_dir() {
+                fs::create_dir_all(&dest)?;
+                continue;
+            }
+            if let Some(parent) = dest.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut out = fs::File::create(&dest)?;
+            std::io::copy(&mut entry, &mut out)?;
+            written.push(dest);
+        }
+        if written.is_empty() {
+            return Err(LibraryError::NoExecutable);
+        }
+
+        let manifest_xml = read_extracted(&extracted_dir, "WMAppManifest.xml");
+        let app_manifest = read_extracted(&extracted_dir, "AppManifest.xaml");
+        let info = manifest_xml
+            .zip(app_manifest.as_deref())
+            .and_then(|(manifest, app)| xap::parse(&manifest, app));
+        let Some(info) = info else {
+            return Err(LibraryError::NotXap(source_name));
+        };
+
+        let exe_abs = extracted_dir.join(format!("{}.dll", info.entry_assembly));
+        if !exe_abs.is_file() {
+            return Err(LibraryError::NotXap(source_name));
+        }
+        let executable = exe_abs
+            .strip_prefix(&game_dir)
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|_| exe_abs.clone());
+
+        let display_name = if info.title.is_empty() {
+            pretty_id(&id)
+        } else {
+            info.title.clone()
+        };
+
+        // The entry assembly itself is not its own companion.
+        let mut companions = record_extracted_libraries(&extracted_dir, &game_dir);
+        companions.retain(|path| path != &executable);
+
+        let entry = GameEntry {
+            id: id.clone(),
+            display_name,
+            provider: info.publisher.clone(),
+            executable,
+            source_cab: source_name,
+            install_dir: None,
+            install_dirs: Vec::new(),
+            save_prefix: None,
+            registry: Vec::new(),
+            imported_at: now_unix_seconds(),
+            settings: GameSettings {
+                cpu_backend: self.config.default_cpu_backend,
+                ..GameSettings::default()
+            },
+            icon: copy_xap_icon(&game_dir, &extracted_dir),
+            companions,
+        };
+
+        self.commit_entry(&id, entry)
+    }
+
     /// Import a RAR archive containing a Pocket PC game.
     ///
     /// RAR extraction is kept in the shared library so Android, desktop,
@@ -1330,6 +1440,7 @@ impl Library {
         match ext.as_deref() {
             Some("cab") => self.import_cab(path),
             Some("zip") => self.import_zip(path),
+            Some("xap") => self.import_xap(path),
             Some("rar") => self.import_rar(path),
             _ => self.import_exe(path),
         }
@@ -1456,6 +1567,28 @@ fn copy_sibling_libraries(exe_path: &Path, dest_dir: &Path, game_dir: &Path) -> 
 /// import has already written every payload file into `extracted_dir`,
 /// so the libraries are where the emulator will look for them. We only
 /// record them for [`GameEntry::companions`].
+/// Read a file that a `.xap` is required to carry, returning `None`
+/// for an absent or non-UTF-8 document.
+fn read_extracted(extracted_dir: &Path, name: &str) -> Option<String> {
+    fs::read_to_string(extracted_dir.join(name)).ok()
+}
+
+/// Copy the package's tile thumbnail (`PhoneGameThumb.png`) into the
+/// game directory as the launcher icon, mirroring what
+/// [`extract_icon_png`] does for executables that carry one.
+fn copy_xap_icon(game_dir: &Path, extracted_dir: &Path) -> Option<PathBuf> {
+    let source = extracted_dir.join("PhoneGameThumb.png");
+    let mut bytes = Vec::new();
+    fs::File::open(&source).ok()?.read_to_end(&mut bytes).ok()?;
+    // Accept only what a PNG decoder will also accept later.
+    if bytes.len() < 8 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" {
+        return None;
+    }
+    let dest = game_dir.join("icon.png");
+    fs::write(&dest, &bytes).ok()?;
+    Some(PathBuf::from("icon.png"))
+}
+
 fn record_extracted_libraries(extracted_dir: &Path, game_dir: &Path) -> Vec<PathBuf> {
     let Ok(entries) = fs::read_dir(extracted_dir) else {
         return Vec::new();
@@ -2335,6 +2468,78 @@ mod tests {
         .unwrap();
         let lib2 = Library::open(&root2).unwrap();
         assert!(lib2.config().show_fps);
+    }
+
+    /// A synthetic Windows Phone package: both manifests, a payload
+    /// assembly and a tile thumbnail. `import_xap` picks the entry
+    /// assembly by name, so the payload need not be a real PE.
+    #[test]
+    fn import_xap_reads_windows_phone_manifests() {
+        use std::io::Write;
+
+        let root = tmpdir("xap-import");
+        fs::create_dir_all(&root).unwrap();
+        let xap_path = root.join("Cut_The_Rope.xap");
+        let file = fs::File::create(&xap_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::FileOptions::default();
+        zip.start_file("WMAppManifest.xml", options).unwrap();
+        zip.write_all(
+            b"<Deployment AppPlatformVersion=\"7.1\">\
+<App Title=\"Cut The Rope\" Publisher=\"Zeptolab UK Ltd\" /></Deployment>",
+        )
+        .unwrap();
+        zip.start_file("AppManifest.xaml", options).unwrap();
+        zip.write_all(
+            b"<Deployment EntryPointAssembly=\"ctre_wp7\"><Deployment.Parts /></Deployment>",
+        )
+        .unwrap();
+        zip.start_file("PhoneGameThumb.png", options).unwrap();
+        zip.write_all(b"\x89PNG\r\n\x1a\n").unwrap();
+        zip.start_file("ctre_wp7.dll", options).unwrap();
+        zip.write_all(b"managed il payload").unwrap();
+        zip.finish().unwrap();
+
+        let mut library = Library::open(root.join("lib")).unwrap();
+        let entry = library.import_xap(&xap_path).unwrap().clone();
+        assert_eq!(entry.display_name, "Cut The Rope");
+        assert_eq!(entry.provider.as_deref(), Some("Zeptolab UK Ltd"));
+        assert_eq!(entry.executable, PathBuf::from("extracted/ctre_wp7.dll"));
+        assert_eq!(entry.icon, Some(PathBuf::from("icon.png")));
+        assert!(root
+            .join("lib")
+            .join("games")
+            .join(&entry.id)
+            .join("icon.png")
+            .is_file());
+    }
+
+    /// A ZIP that carries the manifest names but not a package
+    /// structure the loader can act on is rejected, not imported as a
+    /// broken game.
+    #[test]
+    fn import_xap_rejects_entry_assembly_mismatch() {
+        use std::io::Write;
+
+        let root = tmpdir("xap-reject");
+        fs::create_dir_all(&root).unwrap();
+        let xap_path = root.join("Broken.xap");
+        let file = fs::File::create(&xap_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::FileOptions::default();
+        zip.start_file("WMAppManifest.xml", options).unwrap();
+        zip.write_all(b"<Deployment><App Title=\"X\" /></Deployment>")
+            .unwrap();
+        zip.start_file("AppManifest.xaml", options).unwrap();
+        zip.write_all(b"<Deployment EntryPointAssembly=\"missing\" />")
+            .unwrap();
+        zip.finish().unwrap();
+
+        let mut library = Library::open(root.join("lib")).unwrap();
+        assert!(matches!(
+            library.import_xap(&xap_path),
+            Err(LibraryError::NotXap(_))
+        ));
     }
 
     #[test]

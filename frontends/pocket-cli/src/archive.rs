@@ -1,5 +1,5 @@
-//! Auto-extraction of `.cab`, `.zip`, and `.rar` archives so that
-//! `pockethle run game.cab` (or `game.zip` / `game.rar`) just works.
+//! Auto-extraction of `.cab`, `.zip`, `.rar`, and `.xap` archives so that
+//! `pockethle run game.cab` (or `game.zip` / `game.rar` / `game.xap`) just works.
 //!
 //! Pocket PC titles are almost always shipped as a single `.cab` that
 //! contains the executable, helper DLLs and game assets, or as a
@@ -82,6 +82,7 @@ pub fn prepare(path: &Path) -> Result<Launcher> {
     match kind {
         ArchiveKind::Cab => prepare_cab(path),
         ArchiveKind::Zip => prepare_zip(path),
+        ArchiveKind::Xap => prepare_xap(path),
         ArchiveKind::Rar => prepare_rar(path),
         ArchiveKind::InstallShieldSfx => prepare_installshield_sfx(path),
         ArchiveKind::Pe => Ok(Launcher {
@@ -102,6 +103,7 @@ pub fn prepare(path: &Path) -> Result<Launcher> {
 enum ArchiveKind {
     Cab,
     Zip,
+    Xap,
     Rar,
     InstallShieldSfx,
     Pe,
@@ -119,6 +121,7 @@ impl ArchiveKind {
         match ext.as_deref() {
             Some("cab") => Self::Cab,
             Some("zip") => Self::Zip,
+            Some("xap") => Self::Xap,
             Some("rar") => Self::Rar,
             _ => Self::Pe,
         }
@@ -914,6 +917,135 @@ pub fn save_id(path: &Path) -> String {
     }
 }
 
+/// Prepare a Windows Phone `.xap` package for execution.
+///
+/// A `.xap` is a Silverlight application package: a zip container whose
+/// `WMAppManifest.xml` describes the application (title, capabilities,
+/// tile) and whose `AppManifest.xaml` names the entry assembly. The
+/// assemblies themselves are managed PE32 images — they carry no ARM
+/// code — so, like managed Windows Mobile images, they run through the
+/// host managed runtime instead of the CPU interpreter.
+///
+/// The entry-point assembly named by `AppManifest.xaml` is selected;
+/// Silverlight applications have no `Main`, the platform constructs
+/// their `Application` type through the navigation framework.
+fn prepare_xap(path: &Path) -> Result<Launcher> {
+    let tmp = TempDir::with_prefix("pockethle-xap-")
+        .with_context(|| format!("creating temp dir for {}", path.display()))?;
+    let f = File::open(path).with_context(|| format!("opening {}", path.display()))?;
+    let mut archive =
+        zip::ZipArchive::new(f).with_context(|| format!("parsing xap {}", path.display()))?;
+    let mut written: Vec<PathBuf> = Vec::with_capacity(archive.len());
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i)?;
+        let Some(rel) = entry.enclosed_name().map(Path::to_path_buf) else {
+            continue;
+        };
+        if rel.as_os_str().is_empty() {
+            continue;
+        }
+        let dest = tmp.path().join(&rel);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&dest)?;
+            continue;
+        }
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut out = File::create(&dest)?;
+        std::io::copy(&mut entry, &mut out)?;
+        written.push(dest);
+    }
+    if written.is_empty() {
+        return Err(anyhow!("{} contains no files", path.display()));
+    }
+
+    let manifest = written
+        .iter()
+        .find(|p| {
+            p.file_name()
+                .is_some_and(|n| n.eq_ignore_ascii_case("WMAppManifest.xml"))
+        })
+        .ok_or_else(|| {
+            anyhow!(
+                "{} is not a Windows Phone XAP package: no WMAppManifest.xml",
+                path.display()
+            )
+        })?;
+    let app_manifest = written
+        .iter()
+        .find(|p| {
+            p.file_name()
+                .is_some_and(|n| n.eq_ignore_ascii_case("AppManifest.xaml"))
+        })
+        .ok_or_else(|| {
+            anyhow!(
+                "{} is not a Windows Phone XAP package: no AppManifest.xaml",
+                path.display()
+            )
+        })?;
+
+    let app_manifest_text = std::fs::read_to_string(app_manifest)
+        .with_context(|| format!("reading {}", app_manifest.display()))?;
+    let manifest_text = std::fs::read_to_string(manifest)
+        .with_context(|| format!("reading {}", manifest.display()))?;
+    let info = pocket_library::xap::parse(&manifest_text, &app_manifest_text)
+        .ok_or_else(|| anyhow!("{} carries no usable WP7 app manifest", path.display()))?;
+    let title = if info.title.is_empty() {
+        path.file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Windows Phone application".to_string())
+    } else {
+        info.title.clone()
+    };
+    if let Some(runtime) = info.app_platform_version.as_deref() {
+        println!("Windows Phone package: {title} (AppPlatformVersion {runtime})");
+    }
+    // Windows Phone applications have no `Main()`: the phone's shell
+    // navigates to `EntryPointType` and the ApplicationHost instantiates
+    // it. A host runtime can still load and inspect the image (useful for
+    // compatibility probes), but until the Silverlight application model
+    // and the Silverlight / XNA API surface are implemented there is
+    // nothing to execute, so say so instead of leaving the runtime's
+    // "doesn't have an entry point" as the only clue.
+    println!(
+        "Windows Phone Silverlight/XNA application: no standalone entry point; \
+         hosting it needs the Silverlight application model, which is not implemented yet"
+    );
+
+    // The entry assembly sits at the package root next to its
+    // satellite libraries and the `Content/` tree the XNA content
+    // pipeline compiled the game's assets into.
+    let exe_path = tmp.path().join(format!("{}.dll", info.entry_assembly));
+    if !exe_path.is_file() {
+        return Err(anyhow!(
+            "XAP names entry assembly `{}` but {}/{}.dll does not exist",
+            info.entry_assembly,
+            tmp.path().display(),
+            info.entry_assembly
+        ));
+    }
+
+    let origin = format!(
+        "XAP {title} (Windows Phone package) -> {}",
+        exe_path.display()
+    );
+    Ok(Launcher {
+        exe: exe_path,
+        mount_dir: Some(tmp.path().to_path_buf()),
+        extra_mounts: vec![(
+            "\\Program Files\\Game\\".to_string(),
+            tmp.path().to_path_buf(),
+        )],
+        guest_exe_path: None,
+        registry: Vec::new(),
+        save_prefix: None,
+        native_screen: None,
+        origin,
+        _tempdir: Some(tmp),
+    })
+}
+
 fn prepare_rar(path: &Path) -> Result<Launcher> {
     let tmp = TempDir::with_prefix("pockethle-rar-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
@@ -1311,6 +1443,49 @@ mod tests {
         assert!(matches!(
             ArchiveKind::detect(Path::new("noext")),
             ArchiveKind::Pe
+        ));
+        assert!(matches!(
+            ArchiveKind::detect(Path::new("game.XAP")),
+            ArchiveKind::Xap
+        ));
+    }
+
+    /// A synthetic Windows Phone package: both manifests plus a payload
+    /// assembly. `prepare_xap` picks the entry assembly by name, so the
+    /// payload does not need to be a real PE here.
+    #[test]
+    fn prepare_xap_selects_entry_assembly() {
+        let dir = TempDir::new().unwrap();
+        let xap_path = dir.path().join("Cut_The_Rope.xap");
+        {
+            let file = File::create(&xap_path).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+            let options = zip::write::FileOptions::default();
+            zip.start_file("WMAppManifest.xml", options).unwrap();
+            zip.write_all(
+                b"<Deployment AppPlatformVersion=\"7.1\">\n  <App Title=\"Cut The Rope\" />\n</Deployment>",
+            )
+            .unwrap();
+            zip.start_file("AppManifest.xaml", options).unwrap();
+            zip.write_all(b"<Deployment EntryPointAssembly=\"ctre_wp7\" />")
+                .unwrap();
+            zip.start_file("ctre_wp7.dll", options).unwrap();
+            zip.write_all(b"managed il payload").unwrap();
+            zip.finish().unwrap();
+        }
+        let launcher = prepare_xap(&xap_path).unwrap();
+        assert_eq!(launcher.exe.file_name().unwrap(), "ctre_wp7.dll");
+        assert!(launcher.exe.is_file());
+        assert!(launcher.origin.contains("Cut The Rope"));
+        assert!(launcher.mount_dir.as_ref().is_some_and(|d| d.is_dir()));
+        assert!(launcher.guest_exe_path.is_none());
+    }
+
+    #[test]
+    fn detect_kinds_xap() {
+        assert!(matches!(
+            ArchiveKind::detect(Path::new("game.XAP")),
+            ArchiveKind::Xap
         ));
     }
 
