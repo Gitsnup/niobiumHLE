@@ -15926,7 +15926,6 @@ mod tests {
             crt_fputws(&mut ctx).unwrap(),
             DispatchOutcome::ReturnedR0(0)
         );
-        drop(ctx);
         assert_eq!(std::fs::read(&path).unwrap(), b"Chopper Fight ready\r\n");
     }
 
