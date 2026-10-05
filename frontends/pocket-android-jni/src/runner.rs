@@ -257,16 +257,17 @@ fn run_game_to_completion(
         if let Some(runtime) = &image.managed_runtime {
             let screen = entry.settings.screen.size();
             if crate::managed_game::supports(&exe) {
-                summary_lines.push(
-                    "Managed image: using the Android vAlienAttack compatibility renderer."
-                        .to_string(),
-                );
+                summary_lines.push(format!(
+                    "Managed image: using the Android {} compatibility renderer.",
+                    crate::managed_game::game_name(&exe)
+                ));
                 summary_lines.push(format!("Screen: {}x{}", screen.0, screen.1));
                 let renderer_summary = crate::managed_game::run(&exe, state, input_rx, screen);
                 return format!("{}\n{renderer_summary}", summary_lines.join("\n"));
             }
             summary_lines.push(format!(
-                "Managed image: CLR metadata {runtime} (.NET Compact Framework). Android has no general CLR backend for this title."
+                "Managed image: {}. Android has no general CLR backend for this title.",
+                pocket_core::pe::describe_managed_runtime(runtime)
             ));
             return summary_lines.join("\n");
         }

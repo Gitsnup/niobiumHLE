@@ -25,6 +25,7 @@
 //!   the implementation rationale.
 
 mod managed_game;
+mod randomnumgen;
 mod runner;
 
 use std::path::Path;

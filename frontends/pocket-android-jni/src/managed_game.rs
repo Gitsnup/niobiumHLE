@@ -212,7 +212,7 @@ impl ManagedGame {
         }
     }
 
-    fn render(&self, framebuffer: &mut Framebuffer) {
+    fn render(&mut self, framebuffer: &mut Framebuffer) {
         framebuffer.fill(rgb565(0, 0, 0));
         let sx = framebuffer.width as f32 / LOGICAL_WIDTH as f32;
         let sy = framebuffer.height as f32 / LOGICAL_HEIGHT as f32;
@@ -300,22 +300,61 @@ impl ManagedGame {
     }
 }
 
-pub(crate) fn supports(exe: &Path) -> bool {
+fn exe_stem(exe: &Path) -> String {
     exe.file_stem()
         .and_then(|name| name.to_str())
-        .map(|name| name.to_ascii_lowercase().contains("valienattack"))
-        .unwrap_or(false)
+        .map(|name| name.to_ascii_lowercase())
+        .unwrap_or_default()
 }
 
-pub(crate) fn run(
+impl ManagedRenderer for ManagedGame {
+    fn handle(&mut self, event: InputEvent) {
+        self.handle(event);
+    }
+
+    fn tick(&mut self) {
+        self.tick();
+    }
+
+    fn render(&mut self, framebuffer: &mut Framebuffer) {
+        self.render(framebuffer);
+    }
+}
+
+pub(crate) fn supports(exe: &Path) -> bool {
+    let name = exe_stem(exe);
+    name.contains("valienattack") || name.contains("randomnumgen")
+}
+
+/// Display name for launcher summaries: which compatibility renderer a
+/// managed image is about to get.
+pub(crate) fn game_name(exe: &Path) -> &'static str {
+    if exe_stem(exe).contains("valienattack") {
+        "vAlienAttack"
+    } else {
+        "RandomNumGen"
+    }
+}
+
+/// One pump loop serves every compatibility renderer: drain input,
+/// tick, render, publish, sleep a frame.
+pub(crate) trait ManagedRenderer {
+    fn handle(&mut self, event: InputEvent);
+    fn tick(&mut self);
+    fn render(&mut self, framebuffer: &mut Framebuffer);
+}
+
+pub(crate) fn run_renderer<R: ManagedRenderer>(
+    renderer: Result<R, anyhow::Error>,
+    label: &'static str,
     exe: &Path,
     state: &Arc<SessionState>,
     input_rx: Receiver<InputCommand>,
     screen: (u32, u32),
 ) -> String {
-    let mut game = match ManagedGame::new(screen) {
+    let mut game = match renderer {
         Ok(game) => game,
-        Err(error) => return format!("Managed vAlienAttack renderer failed: {error:#}"),
+        Err(error) => return format!("Managed {label} renderer failed: {error:#}"),
     };
     let mut framebuffer = Framebuffer::new(screen.0, screen.1);
     game.render(&mut framebuffer);
@@ -331,10 +370,7 @@ pub(crate) fn run(
             }
         }
         if stop {
-            return format!(
-                "Managed vAlienAttack renderer completed for {}",
-                exe.display()
-            );
+            return format!("Managed {label} renderer completed for {}", exe.display());
         }
         game.tick();
         game.render(&mut framebuffer);
@@ -343,11 +379,30 @@ pub(crate) fn run(
     }
 }
 
-fn rgb565(r: u8, g: u8, b: u8) -> u16 {
+pub(crate) fn run(
+    exe: &Path,
+    state: &Arc<SessionState>,
+    input_rx: Receiver<InputCommand>,
+    screen: (u32, u32),
+) -> String {
+    match game_name(exe) {
+        "RandomNumGen" => crate::randomnumgen::run(state, input_rx, screen),
+        _ => run_renderer(
+            ManagedGame::new(screen),
+            "vAlienAttack",
+            exe,
+            state,
+            input_rx,
+            screen,
+        ),
+    }
+}
+
+pub(crate) const fn rgb565(r: u8, g: u8, b: u8) -> u16 {
     ((r as u16 >> 3) << 11) | ((g as u16 >> 2) << 5) | (b as u16 >> 3)
 }
 
-fn draw_rect(
+pub(crate) fn draw_rect(
     framebuffer: &mut Framebuffer,
     x: i32,
     y: i32,
@@ -407,7 +462,7 @@ fn draw_sprite(
     }
 }
 
-fn draw_text(
+pub(crate) fn draw_text(
     framebuffer: &mut Framebuffer,
     x: i32,
     y: i32,
@@ -438,11 +493,44 @@ fn draw_text(
 fn glyph(ch: char) -> [u8; 7] {
     match ch.to_ascii_uppercase() {
         'A' => [0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11],
+        'B' => [0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e],
+        'C' => [0x0e, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0e],
+        'D' => [0x1e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1e],
         'E' => [0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f],
+        'F' => [0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x10],
+        'G' => [0x0e, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0f],
+        'H' => [0x11, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11],
         'I' => [0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1f],
+        'J' => [0x07, 0x02, 0x02, 0x02, 0x02, 0x12, 0x0c],
+        'K' => [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11],
+        'L' => [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f],
+        'M' => [0x11, 0x1b, 0x15, 0x15, 0x11, 0x11, 0x11],
+        'N' => [0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11],
+        'O' => [0x0e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e],
+        'P' => [0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10],
+        'Q' => [0x0e, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0d],
         'R' => [0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11],
         'S' => [0x0f, 0x10, 0x10, 0x0e, 0x01, 0x01, 0x1e],
         'T' => [0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
+        'U' => [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e],
+        'V' => [0x11, 0x11, 0x11, 0x11, 0x11, 0x0a, 0x04],
+        'W' => [0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a],
+        'X' => [0x11, 0x11, 0x0a, 0x04, 0x0a, 0x11, 0x11],
+        'Y' => [0x11, 0x11, 0x11, 0x0a, 0x04, 0x04, 0x04],
+        'Z' => [0x1f, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1f],
+        '0' => [0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e],
+        '1' => [0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e],
+        '2' => [0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f],
+        '3' => [0x1f, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0e],
+        '4' => [0x02, 0x06, 0x0a, 0x12, 0x1f, 0x02, 0x02],
+        '5' => [0x1f, 0x10, 0x1e, 0x01, 0x01, 0x11, 0x0e],
+        '6' => [0x06, 0x08, 0x10, 0x1e, 0x11, 0x11, 0x0e],
+        '7' => [0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08],
+        '8' => [0x0e, 0x11, 0x11, 0x0e, 0x11, 0x11, 0x0e],
+        '9' => [0x0e, 0x11, 0x11, 0x0f, 0x01, 0x02, 0x0c],
+        ':' => [0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00],
+        '-' => [0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00],
+        '.' => [0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x0c],
         _ => [0; 7],
     }
 }
