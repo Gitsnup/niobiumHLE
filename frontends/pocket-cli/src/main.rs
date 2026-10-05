@@ -319,7 +319,10 @@ fn cmd_pe_info(path: &std::path::Path) -> Result<()> {
         img.entry_va()
     );
     if let Some(runtime) = img.managed_runtime.as_deref() {
-        println!("Managed image: CLR metadata {runtime} (requires .NET Compact Framework)");
+        println!(
+            "Managed image: {} (runs through the managed-runtime path)",
+            pocket_core::pe::describe_managed_runtime(runtime)
+        );
     }
     println!("Sections:");
     for s in &img.sections {
@@ -610,7 +613,7 @@ fn cmd_run(
         image
             .managed_runtime
             .as_deref()
-            .map(|v| format!(", CLR runtime {v}"))
+            .map(|v| format!(", {}", pocket_core::pe::describe_managed_runtime(v)))
             .unwrap_or_default()
     );
     if image.managed_runtime.is_some() {

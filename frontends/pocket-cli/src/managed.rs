@@ -188,9 +188,28 @@ fn wait_for_window(pid: u32, timeout: Duration, display: Option<&str>) -> Option
     }
 }
 
-fn window_id(_pid: u32, display: Option<&str>) -> Option<String> {
+/// Identify the application's window on the display.
+///
+/// Prefer a window owned by the launched process itself: on a shared or
+/// inherited `DISPLAY` the largest visible window belongs to whatever
+/// else the user has open, and taps meant for the game would land there.
+/// The largest-window fallback stays for runtimes whose windows belong
+/// to a helper process the child spawned (older Mono builds do this),
+/// where a PID match finds nothing.
+fn window_id(pid: u32, display: Option<&str>) -> Option<String> {
+    largest_window_for(
+        ["search", "--onlyvisible", "--pid", &pid.to_string()],
+        display,
+    )
+    .or_else(|| largest_window_for(["search", "--onlyvisible", "--name", "."], display))
+}
+
+fn largest_window_for<const N: usize>(
+    search_args: [&str; N],
+    display: Option<&str>,
+) -> Option<String> {
     let output = Command::new("xdotool")
-        .args(["search", "--onlyvisible", "--name", "."])
+        .args(search_args)
         .env("DISPLAY", display.unwrap_or_default())
         .output()
         .ok()?;

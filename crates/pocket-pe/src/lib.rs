@@ -137,6 +137,36 @@ pub struct LoadedImage {
     pub managed_runtime: Option<String>,
 }
 
+/// Name the managed platform a CLR metadata version string points at.
+///
+/// The desktop .NET Framework writes its CLR version with a leading
+/// `v` (`v2.0.50727`, `v4.0.30319`). .NET Compact Framework assemblies
+/// carry a bare `N.0.0.0` string instead — RandomNumGen v1.2 reports
+/// `2.0.0.0` where a desktop .NET 2.0 build would report `v2.0.50727`.
+/// Anything else stays unclassified; the version is still shown so a
+/// new variant can be diagnosed from the log.
+pub fn describe_managed_runtime(version: &str) -> String {
+    if let Some(rest) = version.strip_prefix('v').or_else(|| version.strip_prefix('V')) {
+        if !rest.is_empty() {
+            return format!("Microsoft .NET Framework {rest}");
+        }
+    }
+    if version.is_empty() || version.starts_with("unknown") {
+        return "unknown CLR runtime".to_string();
+    }
+    let dotted = version.split('.').count() >= 2
+        && version
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.');
+    if dotted {
+        // The conventional name is the two-component product version:
+        // CF 2.0 rather than CF 2.0.0.0.
+        let short = version.split('.').take(2).collect::<Vec<_>>().join(".");
+        return format!(".NET Compact Framework {short}");
+    }
+    format!("CLR runtime {version}")
+}
+
 impl LoadedImage {
     pub fn entry_va(&self) -> u32 {
         let va = self.image_base.wrapping_add(self.entry_point);
@@ -501,6 +531,26 @@ mod tests {
     #[test]
     fn an_empty_name_stays_empty() {
         assert_eq!(normalize_import_dll(""), "");
+    }
+
+    /// The bare version strings .NET Compact Framework assemblies carry
+    /// must not be mistaken for a desktop profile: RandomNumGen v1.2 is
+    /// a CF 2.0 build whose metadata says `2.0.0.0`, while desktop .NET
+    /// writes the same CLR generation as `v2.0.50727`.
+    #[test]
+    fn clr_version_strings_name_their_platform() {
+        assert_eq!(
+            describe_managed_runtime("2.0.0.0"),
+            ".NET Compact Framework 2.0"
+        );
+        assert_eq!(
+            describe_managed_runtime("v4.0.30319"),
+            "Microsoft .NET Framework 4.0.30319"
+        );
+        assert_eq!(
+            describe_managed_runtime("something odd"),
+            "CLR runtime something odd"
+        );
     }
 
     #[test]

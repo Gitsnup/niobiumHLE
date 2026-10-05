@@ -1701,7 +1701,8 @@ impl Process {
     ) -> Result<Self, KernelError> {
         if let Some(runtime) = image.managed_runtime.as_deref() {
             return Err(KernelError::Loader(format!(
-                "managed PE requires a .NET Compact Framework runtime ({runtime}); PocketHLE currently executes native ARM/MIPS WinCE images only"
+                "{} image: the ARM/MIPS CPU backend cannot execute IL; run it through a frontend managed-runtime path (the CLI and desktop launcher route managed images automatically)",
+                pocket_pe::describe_managed_runtime(runtime)
             )));
         }
         if !matches!(
