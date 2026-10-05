@@ -146,7 +146,10 @@ pub struct LoadedImage {
 /// Anything else stays unclassified; the version is still shown so a
 /// new variant can be diagnosed from the log.
 pub fn describe_managed_runtime(version: &str) -> String {
-    if let Some(rest) = version.strip_prefix('v').or_else(|| version.strip_prefix('V')) {
+    if let Some(rest) = version
+        .strip_prefix('v')
+        .or_else(|| version.strip_prefix('V'))
+    {
         if !rest.is_empty() {
             return format!("Microsoft .NET Framework {rest}");
         }
@@ -154,10 +157,8 @@ pub fn describe_managed_runtime(version: &str) -> String {
     if version.is_empty() || version.starts_with("unknown") {
         return "unknown CLR runtime".to_string();
     }
-    let dotted = version.split('.').count() >= 2
-        && version
-            .chars()
-            .all(|c| c.is_ascii_digit() || c == '.');
+    let dotted =
+        version.split('.').count() >= 2 && version.chars().all(|c| c.is_ascii_digit() || c == '.');
     if dotted {
         // The conventional name is the two-component product version:
         // CF 2.0 rather than CF 2.0.0.0.
