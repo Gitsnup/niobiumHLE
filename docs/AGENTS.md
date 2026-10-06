@@ -422,6 +422,13 @@ fabricate `WM_PAINT` / `WM_TIMER` traffic, and once
 fabricate `WM_QUIT` (`crates/pocket-winceapi/src/coredll.rs:6682` and
 `:6739`). The guest then runs its own perfectly ordinary shutdown.
 
+A fabricated periodic `WM_PAINT` is not itself a background-erase request.
+`DefWindowProcW` paints the class brush on the initial paint or after
+`InvalidateRect(..., TRUE)`; an explicit `WM_ERASEBKGND` is always honored.
+Otherwise a default window procedure can clear a frame rendered outside its
+paint handler every 16 ms — Spider-Man - Toxic City exposed that as repeated
+white flashes between its GDI blits.
+
 The default differs by frontend, and this is the trap:
 
 | Frontend | Budget |
