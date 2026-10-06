@@ -6407,6 +6407,7 @@ fn register_class_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelErro
         // brush handle is one of our `0xDEAD_xxxx` values.
         let hbr = ctx.cpu.read_u32_le(lpwc + 28).unwrap_or(0);
         ctx.kernel.window_background = class_background_color(ctx, hbr);
+        ctx.kernel.window_background_erase_pending = ctx.kernel.window_background.is_some();
         if let Ok(buf) = ctx.cpu.read_mem(lpwc + 4, 4) {
             let proc_va = u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]);
             if proc_va != 0 {
@@ -8435,28 +8436,27 @@ fn create_dc(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 
 /// `DefWindowProcW(hwnd, msg, wParam, lParam)`.
 ///
-/// Used to be a constant `0`, which is the right answer for nearly
-/// every message but a lie for the two that paint. `DefWindowProc` is
-/// where a window with no `WM_PAINT` handler of its own gets its
-/// background: it erases the client area with the class brush and
-/// leaves the child controls to draw themselves. HelloWorld has no
-/// paint handler at all — its `WndProc` only answers `WM_COMMAND` —
-/// so before this every pixel it didn't own stayed black, including
-/// the ones under its black `STATIC` caption.
+/// Default processing for window messages.
 ///
-/// The erase is deliberately conditional on the class having asked for
-/// a background: `hbrBackground = NULL` means "the app paints it all",
-/// and a GAPI title that writes the framebuffer straight through
-/// [`crate::gx`] must never have its frame wiped out from under it.
+/// Background erasure is a separate `WM_ERASEBKGND` operation, or a
+/// pending erase requested by initial painting / `InvalidateRect(..., TRUE)`.
+/// The synthetic pump also sends periodic `WM_PAINT` messages without an
+/// invalid region. Spider-Man - Toxic City forwards those to this handler
+/// while presenting its own frames; erasing on every synthetic paint made
+/// the screen flash white between its blits.
 fn def_window_proc_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
     let _hwnd = ctx.arg_u32(0)?;
     let message = ctx.arg_u32(1)?;
     match message {
-        WM_PAINT | WM_ERASEBKGND => {
+        WM_ERASEBKGND => {
             erase_window_background(ctx);
-            // WM_ERASEBKGND returns "I erased it"; WM_PAINT returns 0.
-            let r0 = u32::from(message == WM_ERASEBKGND);
-            Ok(DispatchOutcome::ReturnedR0(r0))
+            Ok(DispatchOutcome::ReturnedR0(1))
+        }
+        WM_PAINT => {
+            if ctx.kernel.window_background_erase_pending {
+                erase_window_background(ctx);
+            }
+            Ok(DispatchOutcome::ReturnedR0(0))
         }
         _ => Ok(DispatchOutcome::ReturnedR0(0)),
     }
@@ -8466,6 +8466,7 @@ fn def_window_proc_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelErr
 /// let the controls repaint on top, as a device's `DefWindowProc` plus
 /// display driver would.
 fn erase_window_background(ctx: &mut CallCtx<'_>) {
+    ctx.kernel.window_background_erase_pending = false;
     let Some(cr) = ctx.kernel.window_background else {
         return;
     };
@@ -8489,17 +8490,20 @@ fn erase_window_background(ctx: &mut CallCtx<'_>) {
 }
 
 fn begin_paint(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
-    // BeginPaint(hwnd, lpPaint) -> HDC. Fill the PAINTSTRUCT enough
-    // for the caller (most games only read .hdc / .rcPaint).
+    // BeginPaint(hwnd, lpPaint) -> HDC. Apply and report any pending
+    // class-brush erase, then fill the PAINTSTRUCT fields games read.
     let _hwnd = ctx.arg_u32(0)?;
     let lp_paint = ctx.arg_u32(1)?;
     let (screen_w, screen_h) = screen_dims(ctx);
+    let erase = ctx.kernel.window_background_erase_pending;
+    if erase {
+        erase_window_background(ctx);
+    }
     if lp_paint != 0 {
         let mut buf = [0u8; PAINTSTRUCT_BYTES as usize];
         // hdc
         buf[0..4].copy_from_slice(&GDI_SCREEN_DC.to_le_bytes());
-        // fErase = 1
-        buf[4..8].copy_from_slice(&1u32.to_le_bytes());
+        buf[4..8].copy_from_slice(&u32::from(erase).to_le_bytes());
         // rcPaint = (0,0, screen width, screen height)
         buf[8..12].copy_from_slice(&0u32.to_le_bytes());
         buf[12..16].copy_from_slice(&0u32.to_le_bytes());
@@ -10632,8 +10636,14 @@ fn get_version(_ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 /// the framebuffer dirty themselves — `BitBlt`, `PatBlt`, the GDI
 /// primitives in `pocket_kernel::gdi`, and `sync_direct_framebuffer_write`
 /// for guests that write the mapping directly — so nothing needs this
-/// one to notice a repaint.
-fn invalidate_rect(_ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
+/// one to notice a repaint. `bErase = TRUE` is remembered for the next
+/// paint; fabricated periodic paints alone do not erase the screen.
+fn invalidate_rect(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
+    let _hwnd = ctx.arg_u32(0)?;
+    let _rect = ctx.arg_u32(1)?;
+    if ctx.arg_u32(2)? != 0 {
+        ctx.kernel.window_background_erase_pending = true;
+    }
     Ok(DispatchOutcome::ReturnedR0(1))
 }
 
@@ -15529,6 +15539,7 @@ mod tests {
             wnd_proc: 0,
             window_class_procs: std::collections::HashMap::new(),
             window_background: None,
+            window_background_erase_pending: false,
             pending_create: None,
             window_procs: std::collections::HashMap::new(),
             window_userdata: std::collections::HashMap::new(),
@@ -15916,17 +15927,16 @@ mod tests {
         cpu.write_reg(ArmReg::R0, TEXT).unwrap();
         cpu.write_reg(ArmReg::R1, stream).unwrap();
         let thunk = dummy_thunk();
-        let mut ctx = CallCtx {
-            cpu: &mut cpu,
-            thunk: &thunk,
-            kernel: &mut kernel,
+        let result = {
+            let mut ctx = CallCtx {
+                cpu: &mut cpu,
+                thunk: &thunk,
+                kernel: &mut kernel,
+            };
+            crt_fputws(&mut ctx).unwrap()
         };
 
-        assert_eq!(
-            crt_fputws(&mut ctx).unwrap(),
-            DispatchOutcome::ReturnedR0(0)
-        );
-        drop(ctx);
+        assert_eq!(result, DispatchOutcome::ReturnedR0(0));
         assert_eq!(std::fs::read(&path).unwrap(), b"Chopper Fight ready\r\n");
     }
 
@@ -16671,6 +16681,32 @@ mod tests {
     }
 
     #[test]
+    fn register_class_requests_the_initial_background_erase() {
+        let mut cpu = StubCpu::new();
+        let mut kernel = fresh_kernel();
+        cpu.map_region(0x1000, 0x1000, Prot::READ | Prot::WRITE)
+            .unwrap();
+        let mut wnd_class = [0u8; 40];
+        wnd_class[28..32].copy_from_slice(&6u32.to_le_bytes());
+        cpu.write_mem(0x1000, &wnd_class).unwrap();
+        cpu.write_reg(ArmReg::R0, 0x1000).unwrap();
+        let t = dummy_thunk();
+
+        let result = {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            register_class_w(&mut c).unwrap()
+        };
+
+        assert_eq!(result, DispatchOutcome::ReturnedR0(0xC001));
+        assert_eq!(kernel.window_background, Some(0x00FF_FFFF));
+        assert!(kernel.window_background_erase_pending);
+    }
+
+    #[test]
     fn def_window_proc_erases_background_and_reports_it() {
         let mut cpu = StubCpu::new();
         let mut kernel = fresh_kernel();
@@ -16698,6 +16734,7 @@ mod tests {
         // erase has to stay out of its way.
         kernel.framebuffer.pixels[0..2].copy_from_slice(&[0x00, 0x00]);
         kernel.fb_mapped = true;
+        kernel.window_background_erase_pending = true;
         cpu.write_reg(ArmReg::R1, WM_PAINT).unwrap();
         {
             let mut c = CallCtx {
@@ -16711,6 +16748,121 @@ mod tests {
             );
         }
         assert_eq!(&kernel.framebuffer.pixels[0..2], &[0x00, 0x00]);
+    }
+
+    #[test]
+    fn synthetic_paint_only_erases_when_a_background_erase_is_pending() {
+        let mut cpu = StubCpu::new();
+        let mut kernel = fresh_kernel();
+        kernel.window_background = Some(0x00FF_FFFF);
+        kernel.window_background_erase_pending = true;
+        cpu.write_reg(ArmReg::Sp, 0x4000).unwrap();
+        cpu.write_reg(ArmReg::R0, 0xDEAD_0001).unwrap();
+        cpu.write_reg(ArmReg::R1, WM_PAINT).unwrap();
+        let t = dummy_thunk();
+
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                def_window_proc_w(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(0)
+            );
+        }
+        assert_eq!(&kernel.framebuffer.pixels[0..2], &[0xff, 0xff]);
+        assert!(!kernel.window_background_erase_pending);
+
+        kernel.framebuffer.fill(0xf800);
+        let rendered_frame = kernel.framebuffer.frame_counter;
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                def_window_proc_w(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(0)
+            );
+        }
+        assert_eq!(&kernel.framebuffer.pixels[0..2], &[0x00, 0xf8]);
+        assert_eq!(kernel.framebuffer.frame_counter, rendered_frame);
+
+        cpu.write_reg(ArmReg::R0, 0xDEAD_0001).unwrap();
+        cpu.write_reg(ArmReg::R1, 0).unwrap();
+        cpu.write_reg(ArmReg::R2, 1).unwrap();
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                invalidate_rect(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(1)
+            );
+        }
+        assert!(kernel.window_background_erase_pending);
+
+        cpu.write_reg(ArmReg::R1, WM_PAINT).unwrap();
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                def_window_proc_w(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(0)
+            );
+        }
+        assert_eq!(&kernel.framebuffer.pixels[0..2], &[0xff, 0xff]);
+        assert!(!kernel.window_background_erase_pending);
+    }
+
+    #[test]
+    fn begin_paint_reports_and_consumes_only_a_pending_erase() {
+        let mut cpu = StubCpu::new();
+        let mut kernel = fresh_kernel();
+        kernel.window_background = Some(0x00FF_FFFF);
+        kernel.framebuffer.fill(0xf800);
+        cpu.map_region(0x1000, 0x1000, Prot::READ | Prot::WRITE)
+            .unwrap();
+        cpu.write_reg(ArmReg::R1, 0x1000).unwrap();
+        let t = dummy_thunk();
+
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                begin_paint(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(GDI_SCREEN_DC)
+            );
+        }
+        assert_eq!(&kernel.framebuffer.pixels[0..2], &[0x00, 0xf8]);
+        assert_eq!(cpu.read_u32_le(0x1004).unwrap(), 0);
+
+        kernel.window_background_erase_pending = true;
+        {
+            let mut c = CallCtx {
+                cpu: &mut cpu,
+                thunk: &t,
+                kernel: &mut kernel,
+            };
+            assert_eq!(
+                begin_paint(&mut c).unwrap(),
+                DispatchOutcome::ReturnedR0(GDI_SCREEN_DC)
+            );
+        }
+        assert_eq!(&kernel.framebuffer.pixels[0..2], &[0xff, 0xff]);
+        assert_eq!(cpu.read_u32_le(0x1004).unwrap(), 1);
+        assert!(!kernel.window_background_erase_pending);
     }
 
     #[test]

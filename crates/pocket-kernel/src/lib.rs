@@ -894,14 +894,15 @@ pub struct KernelState {
     pub window_class_procs: HashMap<String, u32>,
     /// `WNDCLASS::hbrBackground` of the class the guest registered.
     ///
-    /// `BeginPaint` erases the client area with this brush before it
-    /// hands the DC over, which is what `DefWindowProc` does for
-    /// `WM_ERASEBKGND` on a device. An app that paints only its
-    /// controls — HelloWorld draws nothing but a `STATIC` and a
-    /// `BUTTON` — relies on the class brush for every other pixel, and
-    /// without it the window stays whatever the framebuffer was
-    /// cleared to (black).
+    /// `BeginPaint` and `DefWindowProc(WM_ERASEBKGND)` use this brush
+    /// when an erase is pending. An app that paints only its controls —
+    /// HelloWorld draws nothing but a `STATIC` and a `BUTTON` — relies on
+    /// the class brush for every other pixel.
     pub window_background: Option<u32>,
+    /// Whether the next paint should erase the client area with its class
+    /// background. Synthetic periodic `WM_PAINT` messages do not imply an
+    /// erase; initial window painting and `InvalidateRect(..., TRUE)` do.
+    pub window_background_erase_pending: bool,
     /// WndProc and CREATESTRUCT for synthetic window creation messages.
     pub pending_create: Option<(u32, u32)>,
     /// Window messages a real Pocket PC shell posts right after a
@@ -2103,6 +2104,7 @@ impl Process {
                 wnd_proc: 0,
                 window_class_procs: HashMap::new(),
                 window_background: None,
+                window_background_erase_pending: false,
                 pending_create: None,
                 find_handles: HashMap::new(),
                 next_find_handle: 0,
