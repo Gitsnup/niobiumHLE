@@ -15927,17 +15927,16 @@ mod tests {
         cpu.write_reg(ArmReg::R0, TEXT).unwrap();
         cpu.write_reg(ArmReg::R1, stream).unwrap();
         let thunk = dummy_thunk();
-        let mut ctx = CallCtx {
-            cpu: &mut cpu,
-            thunk: &thunk,
-            kernel: &mut kernel,
+        let result = {
+            let mut ctx = CallCtx {
+                cpu: &mut cpu,
+                thunk: &thunk,
+                kernel: &mut kernel,
+            };
+            crt_fputws(&mut ctx).unwrap()
         };
 
-        assert_eq!(
-            crt_fputws(&mut ctx).unwrap(),
-            DispatchOutcome::ReturnedR0(0)
-        );
-        drop(ctx);
+        assert_eq!(result, DispatchOutcome::ReturnedR0(0));
         assert_eq!(std::fs::read(&path).unwrap(), b"Chopper Fight ready\r\n");
     }
 
