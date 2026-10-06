@@ -132,6 +132,7 @@ object NativeBridge {
     const val INPUT_POINTER_DOWN: Int = 2
     const val INPUT_POINTER_UP: Int = 3
     const val INPUT_POINTER_MOVE: Int = 4
-}
+
     const val INPUT_MENU_COMMAND: Int = 5
+}
 
