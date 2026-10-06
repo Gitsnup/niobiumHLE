@@ -7448,6 +7448,9 @@ fn input_to_message(ev: pocket_kernel::InputEvent) -> Option<(u32, u32, u32)> {
         }
         pocket_kernel::InputEvent::KeyDown { vk } => Some((WM_KEYDOWN, vk as u32, 1)),
         pocket_kernel::InputEvent::KeyUp { vk } => Some((WM_KEYUP, vk as u32, 0xC000_0001)),
+        // Host chrome taps are renderer/session concerns; the guest
+        // never synthesized them and its window proc must not see one.
+        pocket_kernel::InputEvent::MenuCommand { .. } => None,
     }
 }
 
@@ -7728,7 +7731,8 @@ fn update_key_state(ctx: &mut CallCtx<'_>, ev: pocket_kernel::InputEvent) {
         }
         pocket_kernel::InputEvent::PointerDown { .. }
         | pocket_kernel::InputEvent::PointerUp { .. }
-        | pocket_kernel::InputEvent::PointerMove { .. } => {}
+        | pocket_kernel::InputEvent::PointerMove { .. }
+        | pocket_kernel::InputEvent::MenuCommand { .. } => {}
     }
 }
 

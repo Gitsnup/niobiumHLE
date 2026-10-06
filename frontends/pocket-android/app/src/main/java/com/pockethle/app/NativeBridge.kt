@@ -120,6 +120,12 @@ object NativeBridge {
      * invalid and **must not** be passed back in.
      */
     @JvmStatic external fun nativeFinishGame(handle: Long): String
+    /**
+     * Snapshot of the running session's chrome menu as a JSON array of
+     * `{"id":n,"label":"…"}` objects. Empty for native games: their menu
+     * bars are guest-drawn, so the toolbar shows nothing extra.
+     */
+    @JvmStatic external fun nativePollMenu(handle: Long): String
 
     const val INPUT_KEY_DOWN: Int = 0
     const val INPUT_KEY_UP: Int = 1
@@ -127,3 +133,5 @@ object NativeBridge {
     const val INPUT_POINTER_UP: Int = 3
     const val INPUT_POINTER_MOVE: Int = 4
 }
+    const val INPUT_MENU_COMMAND: Int = 5
+

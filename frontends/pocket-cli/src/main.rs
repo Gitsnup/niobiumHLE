@@ -1244,6 +1244,8 @@ impl ScheduledInputHook {
                 self.held_pointers.remove(&(x, y));
             }
             pocket_core::kernel::InputEvent::PointerMove { .. } => {}
+            // Menu commands drive chrome renderers, not held input state.
+            pocket_core::kernel::InputEvent::MenuCommand { .. } => {}
         }
     }
 }

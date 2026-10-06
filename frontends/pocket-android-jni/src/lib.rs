@@ -602,6 +602,7 @@ const INPUT_KIND_KEY_UP: jint = 1;
 const INPUT_KIND_POINTER_DOWN: jint = 2;
 const INPUT_KIND_POINTER_UP: jint = 3;
 const INPUT_KIND_POINTER_MOVE: jint = 4;
+const INPUT_KIND_MENU_COMMAND: jint = 5;
 
 #[no_mangle]
 pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeStartGame<'local>(
@@ -760,6 +761,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeSendInput<'loca
             x: clamp_u16(a),
             y: clamp_u16(b),
         },
+        INPUT_KIND_MENU_COMMAND => InputEvent::MenuCommand { id: a as u16 },
         other => {
             log::warn!("nativeSendInput: unknown kind {other}");
             return 0;
@@ -767,6 +769,27 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeSendInput<'loca
     };
     session.send_input(InputCommand::Input(event));
     1
+}
+
+/// Poll the session's chrome menu as a JSON array of
+/// `{"id":..,"label":..}` objects. Empty for native guests: their
+/// menu bars are guest-drawn and the host never learns the labels.
+#[no_mangle]
+pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollMenu<'local>(
+    env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    handle: jlong,
+) -> jstring {
+    let Some(session) = session_from_handle(handle) else {
+        return new_jstring(&env, "[]");
+    };
+    let items: Vec<serde_json::Value> = session
+        .poll_menu()
+        .into_iter()
+        .map(|item| serde_json::json!({ "id": item.id, "label": item.label }))
+        .collect();
+    let json = serde_json::to_string(&items).unwrap_or_else(|_| "[]".to_string());
+    new_jstring(&env, json)
 }
 
 #[no_mangle]

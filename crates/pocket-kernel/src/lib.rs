@@ -334,6 +334,14 @@ pub enum InputEvent {
     KeyUp {
         vk: u16,
     },
+    /// A tap on one of the host-rendered menu bar buttons (the
+    /// Android top bar). `id` is the command id the renderer
+    /// published alongside its menu labels. Native guests never see
+    /// this event — their menus are guest-drawn command bars, not
+    /// host chrome.
+    MenuCommand {
+        id: u16,
+    },
 }
 
 /// How a guest asked to be told that a `waveOut` buffer finished

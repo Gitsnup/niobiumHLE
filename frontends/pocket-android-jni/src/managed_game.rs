@@ -7,11 +7,17 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use pocket_core::kernel::{Framebuffer, InputEvent};
 
-use crate::runner::{push_frame, FrameSnapshot, InputCommand, SessionState};
+use crate::runner::{push_frame, FrameSnapshot, InputCommand, MenuItem, SessionState};
 
 const LOGICAL_WIDTH: u32 = 240;
 const LOGICAL_HEIGHT: u32 = 320;
-const CLIENT_TOP: i32 = 20;
+/// The client area starts at the top of the frame now that the menu
+/// bar lives in the host chrome.
+const CLIENT_TOP: i32 = 0;
+
+/// Chrome menu command ids for the title bar entries.
+const MENU_START_CMD: u16 = 1;
+const MENU_EXIT_CMD: u16 = 2;
 const CLIENT_HEIGHT: i32 = 268;
 
 const BACKDROP: &[u8] = include_bytes!("../assets/valien-attack/BackDrop.png");
@@ -93,6 +99,7 @@ struct ManagedGame {
     frame: u64,
     cross: Option<(i32, i32)>,
     stars: [(i32, i32); 9],
+    stop_requested: bool,
 }
 
 impl ManagedGame {
@@ -119,6 +126,7 @@ impl ManagedGame {
                 (57, 226),
                 (183, 243),
             ],
+            stop_requested: false,
         })
     }
 
@@ -157,10 +165,6 @@ impl ManagedGame {
             InputEvent::PointerDown { x, y } => {
                 let x = self.logical_x(x);
                 let y = self.logical_y(y);
-                if y < CLIENT_TOP && x < 58 {
-                    self.start();
-                    return;
-                }
                 if self.started {
                     self.pointer_down = true;
                     self.move_to(x);
@@ -191,8 +195,30 @@ impl ManagedGame {
                 0x0d | 0x20 => self.fire(),
                 _ => {}
             },
+            InputEvent::MenuCommand { id } => match id {
+                MENU_START_CMD => self.start(),
+                MENU_EXIT_CMD => self.stop_requested = true,
+                _ => {}
+            },
             InputEvent::KeyUp { .. } => {}
         }
+    }
+
+    fn menu_items(&self) -> Vec<MenuItem> {
+        vec![
+            MenuItem {
+                id: MENU_START_CMD,
+                label: "Start".to_string(),
+            },
+            MenuItem {
+                id: MENU_EXIT_CMD,
+                label: "Exit".to_string(),
+            },
+        ]
+    }
+
+    fn should_stop(&self) -> bool {
+        self.stop_requested
     }
 
     fn tick(&mut self) {
@@ -216,17 +242,6 @@ impl ManagedGame {
         framebuffer.fill(rgb565(0, 0, 0));
         let sx = framebuffer.width as f32 / LOGICAL_WIDTH as f32;
         let sy = framebuffer.height as f32 / LOGICAL_HEIGHT as f32;
-        draw_rect(
-            framebuffer,
-            0,
-            0,
-            LOGICAL_WIDTH as i32,
-            CLIENT_TOP,
-            rgb565(236, 236, 226),
-            (sx, sy),
-        );
-        draw_text(framebuffer, 4, 6, "Start", rgb565(0, 0, 0), (sx, sy));
-        draw_text(framebuffer, 42, 6, "Exit", rgb565(0, 0, 0), (sx, sy));
         if !self.started {
             draw_sprite(
                 framebuffer,
@@ -308,6 +323,14 @@ fn exe_stem(exe: &Path) -> String {
 }
 
 impl ManagedRenderer for ManagedGame {
+    fn menu_items(&self) -> Vec<MenuItem> {
+        ManagedGame::menu_items(self)
+    }
+
+    fn should_stop(&self) -> bool {
+        ManagedGame::should_stop(self)
+    }
+
     fn handle(&mut self, event: InputEvent) {
         self.handle(event);
     }
@@ -339,6 +362,19 @@ pub(crate) fn game_name(exe: &Path) -> &'static str {
 /// One pump loop serves every compatibility renderer: drain input,
 /// tick, render, publish, sleep a frame.
 pub(crate) trait ManagedRenderer {
+    /// Menu entries the host chrome (the Android toolbar) should offer
+    /// for this renderer. Published once when the session starts; the
+    /// ids come back through `InputEvent::MenuCommand`.
+    fn menu_items(&self) -> Vec<MenuItem> {
+        Vec::new()
+    }
+
+    /// Set by the renderer when the guest asked to exit (for example
+    /// through its chrome menu's Exit entry); the run loop ends the
+    /// session when this is `true`.
+    fn should_stop(&self) -> bool {
+        false
+    }
     fn handle(&mut self, event: InputEvent);
     fn tick(&mut self);
     fn render(&mut self, framebuffer: &mut Framebuffer);
@@ -357,6 +393,7 @@ pub(crate) fn run_renderer<R: ManagedRenderer>(
         Err(error) => return format!("Managed {label} renderer failed: {error:#}"),
     };
     let mut framebuffer = Framebuffer::new(screen.0, screen.1);
+    state.set_menu(game.menu_items());
     game.render(&mut framebuffer);
     push_frame(state, FrameSnapshot::from_framebuffer(&framebuffer));
     loop {
@@ -369,7 +406,7 @@ pub(crate) fn run_renderer<R: ManagedRenderer>(
                 Err(TryRecvError::Disconnected) => stop = true,
             }
         }
-        if stop {
+        if stop || game.should_stop() {
             return format!("Managed {label} renderer completed for {}", exe.display());
         }
         game.tick();

@@ -28,14 +28,17 @@ use anyhow::Result;
 use pocket_core::kernel::{Framebuffer, InputEvent};
 
 use crate::managed_game::{draw_rect, draw_text, rgb565, ManagedRenderer};
-use crate::runner::{InputCommand, SessionState};
+use crate::runner::{InputCommand, MenuItem, SessionState};
 
 /// An `x, y, width, height` rectangle in logical screen coordinates.
 type Rect = (i32, i32, i32, i32);
 
-const MENU_HEIGHT: i32 = 20;
+/// Top inset of the client area. The Generate/Clear menu bar used to
+/// be drawn here by the renderer; the host chrome (the Android
+/// toolbar) renders it now, so the client owns the whole frame.
+const MENU_HEIGHT: i32 = 0;
 
-const MENU_BG: u16 = rgb565(236, 236, 226);
+#[allow(dead_code)]
 const CLIENT_BG: u16 = rgb565(212, 208, 200);
 const CONTROL_BG: u16 = rgb565(255, 255, 255);
 const LIST_BG: u16 = rgb565(255, 255, 255);
@@ -44,9 +47,9 @@ const SELECT_BG: u16 = rgb565(0, 0, 128);
 const SELECT_FG: u16 = rgb565(255, 255, 255);
 const ARROW_BG: u16 = rgb565(212, 208, 200);
 
-/// Menu hit rows, generous because a stylus tap is never pixel-exact.
-const GENERATE_MENU_MAX_X: i32 = 60;
-const CLEAR_MENU_MAX_X: i32 = 110;
+/// Command ids this renderer publishes in its session menu.
+const GENERATE_CMD: u16 = 1;
+const CLEAR_CMD: u16 = 2;
 
 struct RandomNumGenApp {
     screen: (u32, u32),
@@ -145,14 +148,6 @@ impl ManagedRenderer for RandomNumGenApp {
             InputEvent::PointerDown { x, y } => {
                 let x = self.logical_x(x);
                 let y = self.logical_y(y);
-                if y < MENU_HEIGHT {
-                    if x < GENERATE_MENU_MAX_X {
-                        self.generate();
-                    } else if x < CLEAR_MENU_MAX_X {
-                        self.clear();
-                    }
-                    return;
-                }
                 let (_, min_up, min_down) = self.spin_geometry(10);
                 let (_, max_up, max_down) = self.spin_geometry(40);
                 if x >= min_up.0 {
@@ -182,8 +177,26 @@ impl ManagedRenderer for RandomNumGenApp {
                 0x0d | 0x20 => self.generate(),
                 _ => {}
             },
+            InputEvent::MenuCommand { id } => match id {
+                GENERATE_CMD => self.generate(),
+                CLEAR_CMD => self.clear(),
+                _ => {}
+            },
             InputEvent::KeyUp { .. } => {}
         }
+    }
+
+    fn menu_items(&self) -> Vec<MenuItem> {
+        vec![
+            MenuItem {
+                id: GENERATE_CMD,
+                label: "Generate".to_string(),
+            },
+            MenuItem {
+                id: CLEAR_CMD,
+                label: "Clear".to_string(),
+            },
+        ]
     }
 
     fn tick(&mut self) {}
@@ -192,11 +205,6 @@ impl ManagedRenderer for RandomNumGenApp {
         framebuffer.fill(CLIENT_BG);
         let sx = framebuffer.width as f32 / 240.0;
         let sy = framebuffer.height as f32 / 320.0;
-
-        // Menu bar — the toolbar the launch was missing.
-        draw_rect(framebuffer, 0, 0, 240, MENU_HEIGHT, MENU_BG, (sx, sy));
-        draw_text(framebuffer, 8, 7, "Generate", BLACK, (sx, sy));
-        draw_text(framebuffer, 72, 7, "Clear", BLACK, (sx, sy));
 
         // Labels. The guest's Label size is 70x20; text sits near the top.
         draw_text(
@@ -362,6 +370,10 @@ pub(crate) fn run(
 mod tests {
     use super::*;
 
+    fn menu(app: &mut RandomNumGenApp, id: u16) {
+        app.handle(InputEvent::MenuCommand { id });
+    }
+
     fn tap(app: &mut RandomNumGenApp, x: i32, y: i32) {
         app.handle(InputEvent::PointerDown {
             x: x as u16,
@@ -373,26 +385,30 @@ mod tests {
         });
     }
 
-    fn pixel(framebuffer: &mut Framebuffer, x: i32, y: i32) -> u16 {
-        let stride = framebuffer.stride_bytes() as usize;
-        let offset = y as usize * stride + x as usize * 2;
-        let bytes = framebuffer.pixels_mut();
-        u16::from_le_bytes([bytes[offset], bytes[offset + 1]])
-    }
-
-    /// The launch complaint: without this renderer the menu bar with
-    /// Generate/Clear never appeared on Android. The first frame must
-    /// show it, and Generate must be reachable through it.
+    /// The launch complaint: without this renderer the Generate/Clear
+    /// menu never appeared on Android. The chrome menu must be
+    /// published and a menu command must produce a row.
     #[test]
-    fn first_frame_shows_the_menu_bar_and_generate_tap_produces_a_row() {
+    fn first_frame_renders_the_form_and_menu_command_produces_a_row() {
         let mut app = RandomNumGenApp::new((240, 320)).expect("renderer must initialize");
+        assert_eq!(
+            app.menu_items(),
+            vec![
+                MenuItem {
+                    id: GENERATE_CMD,
+                    label: "Generate".to_string()
+                },
+                MenuItem {
+                    id: CLEAR_CMD,
+                    label: "Clear".to_string()
+                },
+            ]
+        );
         let mut framebuffer = Framebuffer::new(240, 320);
         app.render(&mut framebuffer);
         assert!(!framebuffer.is_all_black());
-        // Menu bar background, not the client backdrop.
-        assert_eq!(pixel(&mut framebuffer, 30, 10), MENU_BG);
         // Defaults 0..=1: one row, value inside the range.
-        tap(&mut app, 30, 10);
+        menu(&mut app, GENERATE_CMD);
         assert_eq!(app.log.len(), 1);
         assert!(app.log[0].starts_with("0-1: "));
         let value: i64 = app.log[0]["0-1: ".len()..].parse().expect("numeric result");
@@ -407,18 +423,18 @@ mod tests {
         // maxBox opens at its Minimum, 1.
         assert_eq!(app.max, 1);
         // Down below the minimum does nothing.
-        tap(&mut app, 220, 20 + 10 + 15);
+        tap(&mut app, 220, 10 + 15);
         assert_eq!(app.max, 1);
         // Up raises it.
-        tap(&mut app, 220, 20 + 40 + 5);
+        tap(&mut app, 220, 40 + 5);
         assert_eq!(app.max, 2);
         // minBox down stops at 0.
-        tap(&mut app, 220, 20 + 10 + 15);
+        tap(&mut app, 220, 10 + 15);
         assert_eq!(app.min, 0);
-        tap(&mut app, 220, 20 + 10 + 5);
+        tap(&mut app, 220, 10 + 5);
         assert_eq!(app.min, 1);
         // Generate inside [1, 2].
-        tap(&mut app, 30, 10);
+        menu(&mut app, GENERATE_CMD);
         assert!(app.log[0].starts_with("1-2: "));
         let value: i64 = app.log[0]["1-2: ".len()..].parse().expect("numeric result");
         assert!((1..=2).contains(&value));
@@ -430,18 +446,18 @@ mod tests {
     fn clear_empties_the_log_and_removes_only_a_selected_row() {
         let mut app = RandomNumGenApp::new((240, 320)).expect("renderer must initialize");
         for _ in 0..3 {
-            tap(&mut app, 30, 10);
+            menu(&mut app, GENERATE_CMD);
         }
         assert_eq!(app.log.len(), 3);
-        // Select the second row: list top at 20+70=90, text rows every
-        // 14px starting 4px in; row 1 is centred around y=108.
-        tap(&mut app, 100, 108);
+        // Select the second row: list top at 70, text rows every
+        // 14px starting 4px in; row 1 is centred around y=88.
+        tap(&mut app, 100, 88);
         assert_eq!(app.selected, Some(1));
-        tap(&mut app, 90, 10);
+        menu(&mut app, CLEAR_CMD);
         assert_eq!(app.log.len(), 2);
         // No selection now: Clear wipes the rest.
         assert_eq!(app.selected, None);
-        tap(&mut app, 90, 10);
+        menu(&mut app, CLEAR_CMD);
         assert!(app.log.is_empty());
     }
 
@@ -467,18 +483,17 @@ fn visual_frame_dump() {
         std::fs::write(format!("/tmp/rng-android-{name}.ppm"), fb.snapshot_ppm()).unwrap();
     };
     snap(&mut app, "startup");
-    app.handle(InputEvent::PointerDown { x: 30, y: 6 });
-    app.handle(InputEvent::PointerUp { x: 30, y: 6 });
-    app.handle(InputEvent::PointerDown { x: 30, y: 6 });
+    app.handle(InputEvent::MenuCommand { id: GENERATE_CMD });
+    app.handle(InputEvent::MenuCommand { id: GENERATE_CMD });
     snap(&mut app, "two-generates");
     for _ in 0..3 {
         app.handle(InputEvent::PointerDown { x: 220, y: 61 });
         app.handle(InputEvent::PointerUp { x: 220, y: 61 });
     }
-    app.handle(InputEvent::PointerDown { x: 30, y: 6 });
-    app.handle(InputEvent::PointerUp { x: 30, y: 6 });
+    app.handle(InputEvent::MenuCommand { id: GENERATE_CMD });
     snap(&mut app, "max-raised-to-4-and-generated");
     app.handle(InputEvent::PointerDown { x: 100, y: 100 });
-    app.handle(InputEvent::PointerDown { x: 72, y: 6 });
+    app.handle(InputEvent::PointerUp { x: 100, y: 100 });
+    app.handle(InputEvent::MenuCommand { id: CLEAR_CMD });
     snap(&mut app, "after-clear");
 }

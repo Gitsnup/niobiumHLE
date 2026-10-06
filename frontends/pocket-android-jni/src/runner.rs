@@ -90,6 +90,14 @@ pub enum InputCommand {
     Input(InputEvent),
     Stop,
 }
+/// One entry of the session menu the host chrome renders.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MenuItem {
+    /// Command id carried back to the renderer as `InputEvent::MenuCommand`.
+    pub id: u16,
+    /// Text shown on the button.
+    pub label: String,
+}
 
 /// Shared between the worker thread and the UI thread for the
 /// lifetime of one game session.
@@ -110,6 +118,11 @@ pub(crate) struct SessionState {
     /// Kotlin side drains this from an `AudioTrack` feeder thread
     /// instead of the kernel pushing to a host stream.
     audio: Mutex<Option<pocket_core::kernel::AudioTap>>,
+    /// Menu items the session's chrome (the Android toolbar) should
+    /// offer, published by whichever renderer is driving the guest.
+    /// Empty for native games: their menu bars are guest-drawn and the
+    /// host has no way to learn the labels, so the chrome shows none.
+    menu: Mutex<Vec<MenuItem>>,
 }
 
 impl SessionState {
@@ -119,7 +132,20 @@ impl SessionState {
             running: Mutex::new(true),
             summary: Mutex::new(None),
             audio: Mutex::new(None),
+            menu: Mutex::new(Vec::new()),
         }
+    }
+
+    /// Publish the session's menu, replacing whatever was there.
+    pub fn set_menu(&self, items: Vec<MenuItem>) {
+        if let Ok(mut guard) = self.menu.lock() {
+            *guard = items;
+        }
+    }
+
+    /// Snapshot of the current menu for the chrome.
+    pub fn menu(&self) -> Vec<MenuItem> {
+        self.menu.lock().map(|g| g.clone()).unwrap_or_default()
     }
 }
 
@@ -159,6 +185,12 @@ impl Session {
         }
         let fmt = tap.guest_format();
         Some((fmt.sample_rate, fmt.channels))
+    }
+
+    /// Snapshot of the session's chrome menu (empty for native
+    /// games).
+    pub fn poll_menu(&self) -> Vec<MenuItem> {
+        self.state.menu()
     }
 
     pub fn send_input(&self, cmd: InputCommand) {

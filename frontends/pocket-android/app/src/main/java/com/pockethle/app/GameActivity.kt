@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import org.json.JSONArray
 import org.json.JSONObject
 import android.content.pm.ActivityInfo
 import android.view.KeyEvent
@@ -52,6 +53,9 @@ class GameActivity : AppCompatActivity() {
 
     /** Cached handle from `nativeStartGame` (`0` once we've finished). */
     @Volatile private var session: Long = 0
+
+    /** Session menu entries currently mirrored into the toolbar. */
+    private var sessionMenu: List<Pair<Int, String>> = emptyList()
 
     /** Most recent framebuffer the worker produced — held so we can
      * repaint after `surfaceChanged` resizes the SurfaceView even if
@@ -128,6 +132,7 @@ class GameActivity : AppCompatActivity() {
                     paintFrame(frame)
                 }
             }
+            refreshSessionMenu()
             if (NativeBridge.nativeIsRunning(session) == 0) {
                 // Worker exited on its own (game called ExitProcess
                 // / hit max_slices / errored out). Reap it so we
@@ -278,6 +283,49 @@ class GameActivity : AppCompatActivity() {
      * Stop the emulator if it is still running, free the native
      * session, and surface the textual summary in the status panel.
      */
+    /**
+     * Mirror the running session's chrome menu into the toolbar.
+     *
+     * Managed compatibility renderers publish their guest's menu (the
+     * way every real Pocket PC program exposes its commands); native
+     * guests draw their own menu bars in-frame, so their session menu
+     * stays empty and the toolbar shows nothing extra. The snapshot is
+     * re-read every poll tick but the toolbar is only rebuilt when the
+     * set of entries actually changes.
+     */
+    private fun refreshSessionMenu() {
+        val raw = NativeBridge.nativePollMenu(session)
+        val items = mutableListOf<Pair<Int, String>>()
+        try {
+            val array = JSONArray(raw)
+            for (i in 0 until array.length()) {
+                val entry = array.getJSONObject(i)
+                items.add(Pair(entry.getInt("id"), entry.getString("label")))
+            }
+        } catch (_: Exception) {
+            // Malformed payload: keep whatever menu was shown before.
+            return
+        }
+        if (items == sessionMenu) return
+        sessionMenu = items
+        val menu = toolbar.menu
+        menu.clear()
+        for ((id, label) in items) {
+            menu.add(label).apply {
+                setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                setOnMenuItemClickListener {
+                    NativeBridge.nativeSendInput(
+                        session,
+                        NativeBridge.INPUT_MENU_COMMAND,
+                        id,
+                        0,
+                    )
+                    true
+                }
+            }
+        }
+    }
+
     private fun finishSession() {
         val handle = session
         if (handle == 0L) return

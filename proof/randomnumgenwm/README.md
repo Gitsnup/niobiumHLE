@@ -31,3 +31,23 @@ Random Number Generator) was run through PocketHLE's managed-runtime path.
    the launched process (`xdotool search --pid`) over the largest visible
    window on the display, so taps cannot land in an unrelated window on
    an inherited `DISPLAY`; the largest-window search remains as fallback.
+
+## Android renderer with a host-chrome menu bar
+
+The Android build gets a native compatibility renderer (`randomnumgen`
+in `pocket-android-jni`), but the Generate/Clear menu bar is **not**
+drawn into the frame. Renderers declare their menus through
+`ManagedRenderer::menu_items`, the session publishes them to the host
+chrome, and `GameActivity` renders them as toolbar menu items; a tap
+comes back through the new `InputEvent::MenuCommand { id }` event
+(`nativeSendInput` kind 5 / `INPUT_MENU_COMMAND`). The same mechanism
+drives vAlienAttack's Start/Exit, so any managed title gets a menu bar
+on Android without per-game chrome code.
+
+- `android-startup.png` — full-frame form: labels, spin boxes, empty
+  list, credit line (menu bar lives in the app's toolbar).
+- `android-two-generates.png` — two `MenuCommand(Generate)` taps.
+- `android-max-raised-to-4-and-generated.png` — MAXIMUM up-arrow tapped
+  three times (1 -> 4), one generate inside [0, 4].
+- `android-after-clear.png` — row selection removed, then
+  `MenuCommand(Clear)` emptied the list.
