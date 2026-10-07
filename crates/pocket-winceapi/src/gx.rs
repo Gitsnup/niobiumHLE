@@ -370,6 +370,7 @@ pub(crate) mod tests {
             wnd_proc: 0,
             window_class_procs: std::collections::HashMap::new(),
             window_background: None,
+            window_background_erase_pending: false,
             pending_create: None,
             window_procs: std::collections::HashMap::new(),
             window_userdata: std::collections::HashMap::new(),
