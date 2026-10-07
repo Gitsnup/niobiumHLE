@@ -20,6 +20,7 @@
 use pocket_kernel::gdi::STOCK_SYSTEM_FONT;
 use pocket_kernel::{DispatchOutcome, KernelError};
 
+use crate::coredll::lookup_resource;
 use crate::{CallCtx, WinCeDispatcher};
 
 /// Handle we hand back as the menu bar / command bar window. Games
@@ -149,6 +150,65 @@ fn zero(_ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 /// global and `SendMessageW`s to it later, so leaving it NULL would
 /// route every menu message to the default window proc. Hand back a
 /// dedicated fake HWND instead.
+/// Read a resource out of a guest image by integer id. Returns the
+/// raw bytes, or `None` when the guest has no such resource.
+fn guest_resource_bytes(
+    ctx: &mut CallCtx<'_>,
+    hmodule: u32,
+    ty: u32,
+    name: u32,
+) -> Option<Vec<u8>> {
+    let (entry, base) = lookup_resource(
+        ctx.kernel,
+        hmodule,
+        &pocket_pe::resources::ResourceKey::Id(ty),
+        &pocket_pe::resources::ResourceKey::Id(name),
+    )?;
+    let va = base.wrapping_add(entry.data_rva);
+    ctx.cpu.read_mem(va, entry.size).ok()
+}
+
+/// Build the [`MenuBarState`] a `SHCreateMenuBar` caller asked for.
+///
+/// `nToolBarId` names a menu bar template resource. Two shapes exist
+/// in the wild:
+///
+/// * A Pocket PC menubar `RT_RCDATA` template (menu id + soft key
+///   command ids) whose labels live in the `RT_MENU` resource the
+///   template names — the `Kevtris` 240x320 DLLs use this shape with
+///   the id doubling as a menu id (`102`).
+/// * The `RT_MENU` template directly under `nToolBarId`.
+fn build_menu_bar(
+    ctx: &mut CallCtx<'_>,
+    h_inst_res: u32,
+    toolbar_id: u32,
+) -> Option<pocket_kernel::menubar::MenuBarState> {
+    use pocket_pe::resources::{parse_menu_template, parse_menubar_template};
+
+    let mut bar = pocket_kernel::menubar::MenuBarState::new();
+    if let Some(bytes) = guest_resource_bytes(ctx, h_inst_res, 10, toolbar_id)
+        .and_then(|bytes| parse_menubar_template(&bytes))
+    {
+        // Labels: the RT_MENU the template names. Some generators
+        // store the id minus one.
+        let items = (0..=1)
+            .find_map(|plus| {
+                guest_resource_bytes(ctx, h_inst_res, 4, bytes.menu_id + plus)
+                    .and_then(|data| parse_menu_template(&data))
+            })
+            .unwrap_or_default();
+        bar.set_from_template(&items);
+        return Some(bar);
+    }
+    if let Some(bytes) = guest_resource_bytes(ctx, h_inst_res, 4, toolbar_id)
+        .and_then(|data| parse_menu_template(&data))
+    {
+        bar.set_from_template(&bytes);
+        return Some(bar);
+    }
+    None
+}
+
 fn sh_create_menu_bar(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
     let pmb = ctx.arg_u32(0)?;
     if pmb == 0 {
@@ -181,7 +241,25 @@ fn sh_create_menu_bar(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelEr
         ctx.cpu
             .write_mem(pmb + off, &FAKE_MENUBAR_HWND.to_le_bytes())?;
     }
-    log::debug!("SHCreateMenuBar(cbSize={cb_size}) -> hwndMB=0x{FAKE_MENUBAR_HWND:08x}");
+    // Populate the chrome-visible bar from the guest's own resources.
+    // Failures are non-fatal: the bar just stays empty (the previous
+    // behavior).
+    let h_inst_res = ctx.cpu.read_u32_le(pmb + 0x10).unwrap_or(0);
+    let toolbar_id = ctx.cpu.read_u32_le(pmb + 0x0c).unwrap_or(0);
+    if let Some(bar) = build_menu_bar(ctx, h_inst_res, toolbar_id) {
+        // Seed the kernel menu-flag table so `CheckMenuItem` /
+        // `GetMenuState` round-trip against the template defaults.
+        ctx.kernel.menus.entry(FAKE_MENUBAR_HWND).or_default();
+        ctx.kernel.menu_bar = bar;
+        log::debug!(
+            "SHCreateMenuBar(cbSize={cb_size}, toolbar={toolbar_id}) -> {} item(s)",
+            ctx.kernel.menu_bar.items.len()
+        );
+    } else {
+        log::debug!(
+            "SHCreateMenuBar(cbSize={cb_size}, toolbar={toolbar_id}) -> no template parsed"
+        );
+    }
     Ok(DispatchOutcome::ReturnedR0(1))
 }
 

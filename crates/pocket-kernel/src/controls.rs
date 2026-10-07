@@ -816,6 +816,24 @@ impl Controls {
         self.panel(hwnd).map(|p| p.visible)
     }
 
+    /// TEMPORARY probe: dump every child and panel rect.
+    pub fn probe(&self, x: i32, y: i32) {
+        for p in &self.panels {
+            log::warn!(
+                "PROBE panel hwnd={:#x} rect=({},{},{},{}) visible={}",
+                p.hwnd,
+                p.x,
+                p.y,
+                p.w,
+                p.h,
+                p.visible
+            );
+        }
+        for c in &self.children {
+            let (ox, oy) = self.parent_origin(c.parent);
+            log::warn!("PROBE child hwnd={:#x} parent={:#x} id={} rect=({},{},{},{}) rel_hit={} showing={}", c.hwnd, c.parent, c.id, c.x, c.y, c.w, c.h, c.contains(x - ox, y - oy), self.is_showing(c));
+        }
+    }
     /// Topmost visible control under `(x, y)`, in screen coordinates.
     /// Later-created controls sit on top, matching the z-order a freshly
     /// built dialog has.

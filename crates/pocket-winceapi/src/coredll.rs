@@ -2778,7 +2778,7 @@ fn map_resource_module(
 /// nominal scope is not fatal. Returns the entry (cloned, so no borrow
 /// of `ctx.kernel` outlives the lookup) together with the image base its
 /// `data_rva` is relative to.
-fn lookup_resource(
+pub(crate) fn lookup_resource(
     kernel: &KernelState,
     hmodule: u32,
     ty: &ResourceKey,
@@ -7477,14 +7477,31 @@ fn controls_take_input(
     if ctx.kernel.controls.is_empty() {
         return None;
     }
+    // A modal dialog owns the stylus: route input at its controls and
+    // let taps outside it vanish, instead of letting a press reach the
+    // window underneath while `DialogBox*` holds the guest. Without
+    // this the game's own pump (which drains `pending_input` through
+    // here between park passes) races the dialog's own drain, and a tap
+    // on the welcome dialog's buttons lands on whichever side saw it
+    // first — observed on Kevtris as clicks that fired on some runs and
+    // silently vanished on others.
+    let modal_hwnd = ctx.kernel.modal_dialog.as_ref().map(|d| d.hwnd);
     let action = match ev {
-        pocket_kernel::InputEvent::PointerDown { x, y } => {
-            ctx.kernel.controls.pointer_down(x as i32, y as i32)
-        }
-        pocket_kernel::InputEvent::PointerUp { x, y } => {
-            ctx.kernel.controls.pointer_up(x as i32, y as i32)
-        }
-        pocket_kernel::InputEvent::KeyDown { vk } => ctx.kernel.controls.key_down(vk),
+        pocket_kernel::InputEvent::PointerDown { x, y } => match modal_hwnd {
+            Some(hwnd) => ctx
+                .kernel
+                .controls
+                .pointer_down_in(hwnd, x as i32, y as i32),
+            None => ctx.kernel.controls.pointer_down(x as i32, y as i32),
+        },
+        pocket_kernel::InputEvent::PointerUp { x, y } => match modal_hwnd {
+            Some(hwnd) => ctx.kernel.controls.pointer_up_in(hwnd, x as i32, y as i32),
+            None => ctx.kernel.controls.pointer_up(x as i32, y as i32),
+        },
+        pocket_kernel::InputEvent::KeyDown { vk } => match modal_hwnd {
+            Some(hwnd) => ctx.kernel.controls.key_down_in(hwnd, vk),
+            None => ctx.kernel.controls.key_down(vk),
+        },
         // Moves and key releases are not control input; a release only
         // matters through the press that captured it.
         _ => None,
@@ -10835,6 +10852,8 @@ fn dialog_box_indirect_param_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome,
             initialised: false,
             dispatched: None,
             spins: 0,
+            caller_lr: ctx.cpu.read_reg(ArmReg::Lr)?,
+            opened_at: std::time::Instant::now(),
         });
         // Route `SendMessageW` / `DispatchMessageW` for this handle at
         // the DialogProc rather than the frame window's WndProc.
@@ -10922,11 +10941,20 @@ fn dialog_box_indirect_param_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome,
         }
     }
 
-    // `EndDialog` was called: tear the dialog down and return its result.
-    if let Some(result) = ctx.kernel.modal_dialog.as_ref().and_then(|d| d.result) {
+    // `EndDialog` was called: tear the dialog down and return its result
+    // to the address the original caller came from — `LR` now points at
+    // our own thunk, so [`ModalDialog::caller_lr`] is the only copy of
+    // it left.
+    if let Some((result, caller_lr)) = ctx
+        .kernel
+        .modal_dialog
+        .as_ref()
+        .and_then(|d| d.result.map(|result| (result, d.caller_lr)))
+    {
         log::debug!("DialogBoxIndirectParamW answered with {result}");
         close_modal_dialog(ctx);
-        return Ok(DispatchOutcome::ReturnedR0(result));
+        ctx.cpu.write_reg(ArmReg::R0, result)?;
+        return Ok(DispatchOutcome::JumpTo(caller_lr));
     }
 
     // `DefDlgProc` behaviour: an `IDOK` / `IDCANCEL` the DialogProc did
@@ -10942,24 +10970,53 @@ fn dialog_box_indirect_param_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome,
     {
         if id == pocket_kernel::msgbox::id::OK || id == pocket_kernel::msgbox::id::CANCEL {
             log::debug!("DialogBoxIndirectParamW: DefDlgProc ends the dialog with {id}");
-            close_modal_dialog(ctx);
-            return Ok(DispatchOutcome::ReturnedR0(id));
+            return Ok(end_modal_dialog(ctx, id));
         }
     }
 
-    // Still up. Bound the wait so a headless run cannot spin forever.
-    let spins = {
+    // Still up. Bound the wait in *wall-clock* time: a pass through here
+    // costs microseconds, so a pass counter fires long before the frame
+    // hook's present cadence can deliver the tap that would answer the
+    // dialog — on Kevtris's welcome box the old 100_000-pass cap expired
+    // about 0.1 s in and the dialog cancelled itself before any input
+    // could arrive. A device waits forever; the cap only exists so a
+    // headless run still terminates.
+    log::trace!(
+        "DialogBox park pass, pending_input={}",
+        ctx.kernel.pending_input.len()
+    );
+    let expired = {
         let d = ctx.kernel.modal_dialog.as_mut().expect("still present");
-        d.spins = d.spins.saturating_add(1);
-        d.spins
+        d.opened_at.elapsed() >= MODAL_MAX_WAIT
     };
-    if spins >= MESSAGE_BOX_MAX_SPINS {
-        log::debug!("DialogBoxIndirectParamW unanswered after {spins} spins, reporting cancelled");
-        close_modal_dialog(ctx);
+    if expired {
+        log::debug!("DialogBoxIndirectParamW unanswered after its wait cap, reporting cancelled");
         // IDCANCEL, the same answer dismissing the dialog would give.
-        return Ok(DispatchOutcome::ReturnedR0(2));
+        return Ok(end_modal_dialog(ctx, 2));
     }
     Ok(DispatchOutcome::JumpTo(ctx.thunk.thunk_va))
+}
+
+/// Answer a parked `DialogBoxIndirectParamW`: tear the dialog down and
+/// hand `result` to the address the *original caller* came from.
+///
+/// The park works by re-entering this handler with `LR` pointed at the
+/// import thunk, so by the time the answer exists the caller's return
+/// address only survives in [`ModalDialog::caller_lr`]. Resuming with
+/// [`DispatchOutcome::ReturnedR0`] instead would jump back into the
+/// thunk and re-dispatch the call with stale registers forever.
+fn end_modal_dialog(ctx: &mut CallCtx<'_>, result: u32) -> DispatchOutcome {
+    let caller_lr = ctx
+        .kernel
+        .modal_dialog
+        .as_ref()
+        .map(|d| d.caller_lr)
+        .unwrap_or(0);
+    close_modal_dialog(ctx);
+    if let Err(error) = ctx.cpu.write_reg(ArmReg::R0, result) {
+        log::error!("DialogBoxIndirectParamW: could not write the result: {error}");
+    }
+    DispatchOutcome::JumpTo(caller_lr)
 }
 
 /// Drop a finished modal dialog: its controls, its panel, its proc
@@ -11001,6 +11058,16 @@ fn end_dialog(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 /// frontends' frame rate it is several seconds of real waiting, far
 /// longer than a person needs to see the box and answer it.
 const MESSAGE_BOX_MAX_SPINS: u32 = 100_000;
+
+/// How long a parked `DialogBoxIndirectParamW` waits for the user to
+/// answer before it cancels itself.
+///
+/// Wall-clock, not pass-count: the dialog is re-entered thousands of
+/// times a second while it waits, and each pass must leave room for the
+/// frame hook to run in between so a tap can arrive. Ten seconds is far
+/// longer than a person needs and short enough that a headless run
+/// still moves on.
+const MODAL_MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// `MessageBoxW` — a real, modal message box.
 ///
@@ -15577,6 +15644,7 @@ mod tests {
             next_msg_queue_handle: 0xDEAD_E500,
             menus: std::collections::HashMap::new(),
             next_menu_handle: 0xDEAD_2000,
+            menu_bar: Default::default(),
             sub_menus: std::collections::HashMap::new(),
             modal: None,
             message_box_spins: 0,

@@ -783,12 +783,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollMenu<'local
     let Some(session) = session_from_handle(handle) else {
         return new_jstring(&env, "[]");
     };
-    let items: Vec<serde_json::Value> = session
-        .poll_menu()
-        .into_iter()
-        .map(|item| serde_json::json!({ "id": item.id, "label": item.label }))
-        .collect();
-    let json = serde_json::to_string(&items).unwrap_or_else(|_| "[]".to_string());
+    let json = serde_json::to_string(&session.poll_menu()).unwrap_or_else(|_| "[]".to_string());
     new_jstring(&env, json)
 }
 

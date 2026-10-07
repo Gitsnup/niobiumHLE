@@ -122,7 +122,7 @@ pub(crate) struct SessionState {
     /// offer, published by whichever renderer is driving the guest.
     /// Empty for native games: their menu bars are guest-drawn and the
     /// host has no way to learn the labels, so the chrome shows none.
-    menu: Mutex<Vec<MenuItem>>,
+    menu: Mutex<Vec<serde_json::Value>>,
 }
 
 impl SessionState {
@@ -137,16 +137,42 @@ impl SessionState {
     }
 
     /// Publish the session's menu, replacing whatever was there.
-    pub fn set_menu(&self, items: Vec<MenuItem>) {
+    pub fn set_menu(&self, items: Vec<serde_json::Value>) {
         if let Ok(mut guard) = self.menu.lock() {
             *guard = items;
         }
     }
 
     /// Snapshot of the current menu for the chrome.
-    pub fn menu(&self) -> Vec<MenuItem> {
+    pub fn menu(&self) -> Vec<serde_json::Value> {
         self.menu.lock().map(|g| g.clone()).unwrap_or_default()
     }
+}
+
+/// Serialize a [`MenuItem`] list (the shape compatibility renderers
+/// publish) into the chrome JSON shape.
+pub(crate) fn menu_items_json(items: &[MenuItem]) -> Vec<serde_json::Value> {
+    items
+        .iter()
+        .map(|item| serde_json::json!({ "id": item.id, "label": item.label }))
+        .collect()
+}
+
+/// Serialize the guest's menu bar for the chrome. Top-level items can
+/// carry children (popup menus), which the Kotlin side renders as a
+/// dropdown; disabled / separator entries keep their flags.
+fn menu_bar_json(bar: &pocket_core::kernel::menubar::MenuBarState) -> Vec<serde_json::Value> {
+    fn item_json(item: &pocket_core::kernel::menubar::MenuBarItem) -> serde_json::Value {
+        serde_json::json!({
+            "id": item.id,
+            "label": item.label,
+            "checked": item.checked,
+            "disabled": item.disabled,
+            "separator": item.separator,
+            "children": item.children.iter().map(item_json).collect::<Vec<_>>(),
+        })
+    }
+    bar.items.iter().map(item_json).collect()
 }
 
 /// Owned by Kotlin via a `Box::into_raw`'d pointer.
@@ -189,7 +215,7 @@ impl Session {
 
     /// Snapshot of the session's chrome menu (empty for native
     /// games).
-    pub fn poll_menu(&self) -> Vec<MenuItem> {
+    pub fn poll_menu(&self) -> Vec<serde_json::Value> {
         self.state.menu()
     }
 
@@ -462,6 +488,7 @@ struct SessionHook {
     last_emit_at: Option<Instant>,
     scratch: Vec<u8>,
     saw_non_black: bool,
+    last_menu_push: Vec<serde_json::Value>,
 }
 
 impl SessionHook {
@@ -474,6 +501,7 @@ impl SessionHook {
             last_emit_at: None,
             scratch: Vec::new(),
             saw_non_black: false,
+            last_menu_push: Vec::new(),
         }
     }
 }
@@ -494,6 +522,15 @@ impl FrameHook for SessionHook {
                     }
                 }
             }
+        }
+
+        // Mirror the guest's menu bar into the toolbar when it changes.
+        // Native games (Kevtris) build theirs through `SHCreateMenuBar`;
+        // the parity check keeps a 60fps copy loop off the shared slot.
+        let menu: Vec<serde_json::Value> = menu_bar_json(&kernel.menu_bar);
+        if menu != self.last_menu_push {
+            self.last_menu_push = menu.clone();
+            self.state.set_menu(menu);
         }
 
         // Stream a fresh framebuffer if the guest produced one.

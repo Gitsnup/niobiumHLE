@@ -414,6 +414,7 @@ pub(crate) mod tests {
             next_msg_queue_handle: 0xDEAD_E500,
             menus: std::collections::HashMap::new(),
             next_menu_handle: 0xDEAD_2000,
+            menu_bar: Default::default(),
             sub_menus: std::collections::HashMap::new(),
             modal: None,
             message_box_spins: 0,

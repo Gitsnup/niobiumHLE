@@ -205,6 +205,31 @@ impl WinCeDispatcher {
         coredll::register(&mut d);
         ddraw::register(&mut d);
         aygshell::register(&mut d);
+        // Ordinary imports come through here as `ord:N`; mirror every
+        // named handler onto its ordinal alias so dispatch resolves
+        // either way. `SHCreateMenuBar` is the case in the wild: Kevtris
+        // imports aygshell.dll!#65 and without the alias the call falls
+        // through to the "unimplemented" stub while the PPC2002
+        // `ord:74` registration only answers Solitaire.
+        let aliases: Vec<(String, String, Handler)> = d
+            .by_name
+            .iter()
+            .filter(|((dll, name), _)| {
+                dll == "aygshell.dll" && !name.starts_with("ord:") && !name.starts_with('#')
+            })
+            .map(|((_, name), &h)| (name.clone(), format!("ord:{name}"), h))
+            .collect();
+        let ordinal_names: Vec<(u16, String)> = (0..=4095u16)
+            .filter_map(|o| ordinals::lookup("aygshell.dll", o).map(|n| (o, n)))
+            .collect();
+        for (ord, name) in ordinal_names {
+            if let Some((_, alias, handler)) = aliases.iter().find(|(n, _, _)| *n == name) {
+                d.by_name
+                    .insert(("aygshell.dll".to_string(), alias.clone()), *handler);
+                d.by_name
+                    .insert(("aygshell.dll".to_string(), format!("#{ord}")), *handler);
+            }
+        }
         commctrl::register(&mut d);
         game_dlls::register(&mut d);
         gles::register(&mut d);

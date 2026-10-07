@@ -40,6 +40,7 @@ pub mod framebuffer;
 pub mod gapi;
 pub mod gdi;
 pub mod gz;
+pub mod menubar;
 pub mod msgbox;
 pub mod native_thunks;
 pub mod profile;
@@ -50,6 +51,7 @@ pub mod vfs;
 pub use audio::{AudioEngine, AudioTap, GuestFormat, VoiceParams};
 pub use framebuffer::{Framebuffer, FB_BYTES, FB_HEIGHT, FB_WIDTH};
 pub use gdi::{GdiState, Surface};
+pub use menubar::{MenuBarItem, MenuBarState};
 
 /// Default base address of the synthetic IAT thunk pool.
 pub const THUNK_REGION_BASE: u32 = 0x7000_0000;
@@ -511,6 +513,21 @@ pub struct ModalDialog {
     /// Re-dispatch counter, bounding a headless run the same way
     /// [`KernelState::message_box_spins`] does.
     pub spins: u32,
+    /// The return address the original `DialogBox*` caller left in
+    /// `LR`. The `WM_INITDIALOG` / `WM_COMMAND` round-trips point `LR`
+    /// at our own thunk so the `DialogProc` re-enters the pump, which
+    /// destroys the caller's return address — without this copy the
+    /// final answer would resume inside the import trampoline and the
+    /// guest would spin there forever.
+    pub caller_lr: u32,
+    /// When the dialog went up. The unanswered-dialog cap is wall
+    /// clock, not a re-dispatch count: the park loop re-enters the
+    /// handler hundreds of thousands of times per rendered frame, so
+    /// any count-based cap fires long before the frame hook's polling
+    /// cadence can deliver a stylus tap — which is exactly how
+    /// Kevtris's welcome dialog answered itself with IDCANCEL before a
+    /// tap could land.
+    pub opened_at: std::time::Instant,
 }
 
 /// A commctrl status bar created via `CreateStatusWindow{A,W}`.
@@ -1144,6 +1161,16 @@ pub struct KernelState {
     pub posted_messages: VecDeque<(u32, u32, u32, u32)>,
     pub msg_queues: HashMap<u32, MsgQueue>,
     pub next_msg_queue_handle: u32,
+    /// The active Pocket PC top menu bar: the [`SHCreateMenuBar`] template
+    /// plus the guest's `InsertMenuW`/`DeleteMenu`/`CheckMenuItem` edits on
+    /// top. The frontend chrome (Android toolbar, desktop top bar) mirrors
+    /// this instead of scraping pixels.
+    /// The active Pocket PC top menubar, if the guest created one
+    /// through `SHCreateMenuBar`. The frontend chrome (Android toolbar,
+    /// desktop top bar) mirrors this — labels come from the guest's own
+    /// `RT_MENU` / menubar RCDATA resources, commands come back as
+    /// [`InputEvent::MenuCommand`].
+    pub menu_bar: MenuBarState,
     /// Per-menu table of `(item_id -> flags)`. We track the flags so
     /// that `CheckMenuItem`/`GetMenuState` round-trip the previously
     /// set state instead of always returning the same constant —
@@ -2161,6 +2188,7 @@ impl Process {
                 posted_messages: Default::default(),
                 msg_queues: HashMap::new(),
                 next_msg_queue_handle: 0xDEAD_E500,
+                menu_bar: MenuBarState::new(),
                 menus: HashMap::new(),
                 next_menu_handle: 0xDEAD_2000,
                 sub_menus: HashMap::new(),

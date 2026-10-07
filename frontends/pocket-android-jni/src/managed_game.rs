@@ -393,7 +393,7 @@ pub(crate) fn run_renderer<R: ManagedRenderer>(
         Err(error) => return format!("Managed {label} renderer failed: {error:#}"),
     };
     let mut framebuffer = Framebuffer::new(screen.0, screen.1);
-    state.set_menu(game.menu_items());
+    state.set_menu(crate::runner::menu_items_json(&game.menu_items()));
     game.render(&mut framebuffer);
     push_frame(state, FrameSnapshot::from_framebuffer(&framebuffer));
     loop {

@@ -1063,14 +1063,27 @@ mod scheduled_input_tests {
     use pocket_core::kernel::InputEvent;
 
     #[test]
-    fn startup_stalls_keep_far_future_presses_and_releases_queued() {
+    fn stalled_screens_release_scheduled_inputs_but_far_future_ones_stay_queued() {
+        // A stalled screen answers its dialog with the tap scheduled a
+        // frame or two ahead.
+        assert!(scheduled_input_due(
+            InputEvent::PointerDown { x: 10, y: 10 },
+            3,
+            1,
+            true,
+            false
+        ));
+        // Far-future input belongs to a menu the stalled startup has not
+        // reached yet (Cops & Robbers's sound prompt); it stays queued.
         assert!(!scheduled_input_due(
-            InputEvent::KeyDown { vk: 0x0d },
+            InputEvent::PointerDown { x: 10, y: 10 },
             1300,
             1,
             true,
             false
         ));
+        // A release without its press must still wait for the press to be
+        // queued, stalled or not.
         assert!(!scheduled_input_due(
             InputEvent::KeyUp { vk: 0x0d },
             1303,
@@ -1092,20 +1105,6 @@ mod scheduled_input_tests {
         assert!(scheduled_input_due(
             InputEvent::KeyDown { vk: 0x0d },
             701,
-            700,
-            true,
-            false
-        ));
-        assert!(!scheduled_input_due(
-            InputEvent::KeyDown { vk: 0x0d },
-            702,
-            700,
-            true,
-            false
-        ));
-        assert!(!scheduled_input_due(
-            InputEvent::KeyUp { vk: 0x0d },
-            703,
             700,
             true,
             false
@@ -1184,9 +1183,24 @@ fn scheduled_input_due(
             pocket_core::kernel::InputEvent::KeyUp { .. }
                 | pocket_core::kernel::InputEvent::PointerUp { .. }
         );
-    at_frame <= frames_seen
-        || (stalled && (held_release || at_frame == frames_seen.saturating_add(1)))
+    if at_frame <= frames_seen {
+        return true;
+    }
+    // A static screen (a modal dialog, a paused title) never advances the
+    // changed-frame counter, so once rendering has clearly stalled a tap
+    // scheduled a frame or two ahead is due: it exists to answer whatever
+    // is on screen now. Far-future presses stay queued — a stalled
+    // *startup* (Cops & Robbers's sound prompt) must not fire inputs that
+    // belong to a menu hundreds of frames later. A held release fires on
+    // the stall too, once the press it matches has actually been queued
+    // (`release_is_held` says so); without it a stalled screen would
+    // leave the stylus stuck down forever.
+    stalled && (held_release || at_frame <= frames_seen.saturating_add(STALL_LEAD_FRAMES))
 }
+
+/// How many frames ahead of the current frame count a stalled guest may
+/// still receive scheduled input.
+const STALL_LEAD_FRAMES: u64 = 4;
 
 struct ScheduledInputHook {
     /// Sorted by frame, drained from the front.
