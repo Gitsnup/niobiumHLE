@@ -932,23 +932,27 @@ impl PocketLauncher {
             .max(0.1);
         let display_size = rotated_size * scale;
         let (rect, _response) = ui.allocate_exact_size(display_size, Sense::click_and_drag());
-        self.paint_game_texture(ui, &tex, rect, size, true);
+        let painter = ui.painter();
+        let ctx = ui.ctx().clone();
+        self.paint_game_texture(painter, &ctx, &tex, rect, size, true);
     }
 
-    fn ui_game_only(&mut self, ui: &mut egui::Ui) {
-        let bounds = ui.max_rect();
-        ui.painter().rect_filled(bounds, 0.0, Color32::BLACK);
+    fn ui_game_only(&mut self, ctx: &egui::Context) {
+        let bounds = ctx.screen_rect();
+        let painter = ctx.layer_painter(egui::LayerId::background());
+        painter.rect_filled(bounds, 0.0, Color32::BLACK);
         let Some(tex) = self.last_frame_texture.clone() else {
             return;
         };
         let size = tex.size_vec2();
         let rect = fullscreen_frame_rect(bounds, size, self.game_rotation);
-        self.paint_game_texture(ui, &tex, rect, size, false);
+        self.paint_game_texture(&painter, ctx, &tex, rect, size, false);
     }
 
     fn paint_game_texture(
         &mut self,
-        ui: &mut egui::Ui,
+        painter: &egui::Painter,
+        ctx: &egui::Context,
         tex: &egui::TextureHandle,
         rect: Rect,
         size: Vec2,
@@ -971,13 +975,12 @@ impl PocketLauncher {
         }
         mesh.indices
             .extend_from_slice(&[idx, idx + 1, idx + 2, idx + 2, idx + 1, idx + 3]);
-        ui.painter().add(egui::Shape::mesh(mesh));
+        painter.add(egui::Shape::mesh(mesh));
         if show_fps && self.library.config().show_fps {
             let overlay_rect =
                 Rect::from_min_size(rect.min + Vec2::new(6.0, 6.0), Vec2::new(390.0, 24.0));
-            ui.painter()
-                .rect_filled(overlay_rect, 4.0, Color32::from_black_alpha(190));
-            ui.painter().text(
+            painter.rect_filled(overlay_rect, 4.0, Color32::from_black_alpha(190));
+            painter.text(
                 overlay_rect.min + Vec2::new(6.0, 4.0),
                 egui::Align2::LEFT_TOP,
                 self.frame_stats.overlay_text(),
@@ -985,7 +988,7 @@ impl PocketLauncher {
                 Color32::LIGHT_GREEN,
             );
         }
-        self.handle_pointer(ui.ctx(), &rect, size);
+        self.handle_pointer(ctx, &rect, size);
     }
 
     /// `size` is the guest framebuffer's own dimensions in pixels — the
@@ -1338,9 +1341,7 @@ impl eframe::App for PocketLauncher {
         self.handle_physical_keyboard(ctx);
         self.drain_events(ctx);
         if self.game_only_fullscreen && self.screen == Screen::Run {
-            egui::CentralPanel::default()
-                .frame(egui::Frame::none())
-                .show(ctx, |ui| self.ui_game_only(ui));
+            self.ui_game_only(ctx);
         } else {
             egui::TopBottomPanel::top("top").show(ctx, |ui| self.ui_top_bar(ui));
             egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
