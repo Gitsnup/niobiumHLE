@@ -1,7 +1,7 @@
 //! The Pocket PC top menu bar as a data model.
 //!
 //! Pocket PC 2002 games build their top bar with `SHCreateMenuBar` plus
-//! `InsertMenuW`/`DeleteMenu`/`CheckMenuItem` edits. PocketHLE keeps the
+//! `InsertMenuW`/`DeleteMenu`/`CheckMenuItem` edits. niobiumHLE keeps the
 //! resulting structure in [`MenuBarState`] so the frontend chrome (the
 //! Android toolbar, the desktop top bar) can render real buttons instead
 //! of scraping the guest's pixels. Tapping a button comes back into the

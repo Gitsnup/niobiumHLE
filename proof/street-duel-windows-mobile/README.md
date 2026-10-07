@@ -2,14 +2,14 @@
 
 ## Root cause
 
-Street Duel decodes its packed `data.bin` resources through the C runtime `memset` import. PocketHLE reused one scratch buffer for these calls, but the growth path only initialized the newly appended tail. When a later, larger memset requested a different byte value, the old prefix remained stale. Street Duel then rejected the decoded `FONT.tga` resource as not being an uncompressed 24-bit TGA and dereferenced an invalid texture state before its first rendered frame.
+Street Duel decodes its packed `data.bin` resources through the C runtime `memset` import. niobiumHLE reused one scratch buffer for these calls, but the growth path only initialized the newly appended tail. When a later, larger memset requested a different byte value, the old prefix remained stale. Street Duel then rejected the decoded `FONT.tga` resource as not being an uncompressed 24-bit TGA and dereferenced an invalid texture state before its first rendered frame.
 
 The fix grows the scratch buffer with zeroes and fills the complete requested prefix on every call. The change also makes the existing AYGSHELL handlers reachable through `LoadLibraryW` and `GetProcAddressA/W`, which Street Duel uses for fullscreen setup.
 
 ## Acceptance run
 
 ```sh
-RUST_LOG=warn ./target/release/pockethle run Street_Duel_1_07.cab \
+RUST_LOG=warn ./target/release/niobiumhle run Street_Duel_1_07.cab \
   --cpu unicorn \
   --tap 1:120,160 \
   --key 1:enter \

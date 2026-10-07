@@ -1,10 +1,10 @@
 # CERF-inspired integrations
 
-PocketHLE and [CERF](https://github.com/gweslab/cerf) solve different problems:
-CERF emulates complete Windows CE devices, while PocketHLE runs individual
+niobiumHLE and [CERF](https://github.com/gweslab/cerf) solve different problems:
+CERF emulates complete Windows CE devices, while niobiumHLE runs individual
 native game binaries through a high-level API boundary. CERF is MIT-licensed;
 this document records which ideas are useful here and how they map onto
-PocketHLE instead of copying CERF's device-specific C++ implementation.
+niobiumHLE instead of copying CERF's device-specific C++ implementation.
 
 ## Adopted now
 
@@ -34,7 +34,7 @@ not leave a half-written JSON manifest that prevents the launcher from opening.
 ### Documentation-driven boundaries
 
 CERF's documentation distinguishes the machine layers clearly: CPU/JIT,
-board and SoC peripherals, storage, presentation, input, and state. PocketHLE
+board and SoC peripherals, storage, presentation, input, and state. niobiumHLE
 uses the same separation at a smaller scale:
 
 - `pocket-cpu` owns instruction execution and register/memory access.
@@ -47,15 +47,15 @@ handlers.
 
 ## Deliberately not copied yet
 
-- **Full-device board and peripheral emulation.** It is outside PocketHLE's
+- **Full-device board and peripheral emulation.** It is outside niobiumHLE's
   HLE goal and would duplicate CERF's architecture rather than improve the
   current game path.
 - **CERF save states.** CERF snapshots CPU, MMU, RAM, flash, peripherals, and
   presentation with a versioned section format and compatibility fingerprint.
-  PocketHLE does not yet expose a complete serializable `Process`/CPU state,
+  niobiumHLE does not yet expose a complete serializable `Process`/CPU state,
   so pretending to support save states would be unsafe.
 - **ROM container parsing.** CERF's ROM documentation covers NB0/B000FF,
-  IMGFS, and OEM packages. PocketHLE currently imports CAB/ZIP/raw PE files;
+  IMGFS, and OEM packages. niobiumHLE currently imports CAB/ZIP/raw PE files;
   ROM-container support is a separate loader milestone, not a file-copy task.
 - **Guest Additions, PCMCIA, serial modem, and network hardware.** These are
   complete-device features that do not belong in the current HLE core.

@@ -18,7 +18,7 @@
 //    libcall to `__clear_cache`, which is *not* exported by bionic libc — it
 //    lives in `libclang_rt.builtins-<arch>-android.a` (NDK's compiler-rt).
 //    Rust's cross link does not pull `--rtlib=compiler-rt` automatically when
-//    cargo-ndk drives the link, so the resulting `libpockethle_jni.so` ends
+//    cargo-ndk drives the link, so the resulting `libniobiumhle_jni.so` ends
 //    up with `__clear_cache` as an *undefined dynamic symbol*. With BIND_NOW
 //    on (Android default), `dlopen()` then fails on the user's device with
 //    `cannot locate symbol "__clear_cache"`, `System.loadLibrary` throws

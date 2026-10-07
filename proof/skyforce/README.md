@@ -1,11 +1,11 @@
 # Sky Force proof
 
-The supplied Windows Mobile CAB is `SkyForce-92cc6eaa3424.cab`. PocketHLE boots its ARM executable, initializes GAPI, renders the loading screen, and reaches the in-game language-selection menu.
+The supplied Windows Mobile CAB is `SkyForce-92cc6eaa3424.cab`. niobiumHLE boots its ARM executable, initializes GAPI, renders the loading screen, and reaches the in-game language-selection menu.
 
 ## Reproduction
 
 ```bash
-target/release/pockethle run SkyForce-92cc6eaa3424.cab \
+target/release/niobiumhle run SkyForce-92cc6eaa3424.cab \
   --cpu unicorn \
   --max-slices 5000000 \
   --instructions-per-slice 100000 \

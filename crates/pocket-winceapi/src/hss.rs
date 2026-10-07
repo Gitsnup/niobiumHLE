@@ -461,7 +461,7 @@ mod tests {
     fn loading_the_same_file_twice_decodes_it_once() {
         use pocket_cpu::{regs::ArmReg, stub::StubCpu, Cpu};
 
-        let dir = std::env::temp_dir().join(format!("pockethle-hss-cache-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("niobiumhle-hss-cache-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("temp dir");
         std::fs::write(dir.join("song.tkm"), tiny_module()).expect("write module");
 

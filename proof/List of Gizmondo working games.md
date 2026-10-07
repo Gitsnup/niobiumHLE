@@ -1,6 +1,6 @@
 # List of Gizmondo working games
 
-Verified with PocketHLE's ARM Unicorn backend on the Gizmondo 320×240 landscape layout. These are emulator-side compatibility results, not tests on original hardware.
+Verified with niobiumHLE's ARM Unicorn backend on the Gizmondo 320×240 landscape layout. These are emulator-side compatibility results, not tests on original hardware.
 
 | Game | Result | Proof |
 | --- | --- | --- |

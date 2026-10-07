@@ -1,4 +1,4 @@
-//! Clean-room OpenGL ES 1.x / EGL 1.0 implementation for PocketHLE.
+//! Clean-room OpenGL ES 1.x / EGL 1.0 implementation for niobiumHLE.
 //!
 //! This crate provides the entry points that `libGLES_CM.dll` and
 //! `libGLES_CL.dll` export. Windows Mobile games link these libraries

@@ -11,11 +11,11 @@ ordinal.
 ## Before
 
 ```
-$ pockethle -v run tower-bloxx.cab --cpu unicorn --message-budget 0
+$ niobiumhle -v run tower-bloxx.cab --cpu unicorn --message-budget 0
 ERROR pocket_kernel] cpu crashed: EXCEPTION (READ unmapped) at guest address 0x00000000
   current pc=0x00088d58   ; ldr r3, [r0] with r0 = 0
                           ; then  ldr pc, [r3, #0x1c]  — clipper vtable slot 7
-Final framebuffer snapshot written to /tmp/pockethle-final.ppm (frame_counter=0)
+Final framebuffer snapshot written to /tmp/niobiumhle-final.ppm (frame_counter=0)
 Error: main emulator loop
 ```
 
@@ -38,7 +38,7 @@ Loaded TBX.exe (ARM Thumb machine), 5 sections, 158 imports
 Scheduled synthetic tap at (20,310) for frame 2
 ... 10 taps scheduled ...
 WARN pocket_winceapi] unimplemented call -> COREDLL.dll!Shell_NotifyIcon
-Final framebuffer snapshot written to /tmp/pockethle-final.ppm (frame_counter=90)
+Final framebuffer snapshot written to /tmp/niobiumhle-final.ppm (frame_counter=90)
 Emulator exited cleanly.
 ```
 

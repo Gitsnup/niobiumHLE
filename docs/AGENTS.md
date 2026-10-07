@@ -1,6 +1,6 @@
-# PocketHLE — architecture reference for coding agents
+# niobiumHLE — architecture reference for coding agents
 
-PocketHLE runs Windows CE / Windows Mobile (Pocket PC) applications on
+niobiumHLE runs Windows CE / Windows Mobile (Pocket PC) applications on
 modern hosts by **high-level emulation**: the guest's ARM (or MIPS) code
 is executed instruction-by-instruction, but every call into a Windows CE
 DLL is intercepted at the import boundary and serviced by clean-room Rust
@@ -32,7 +32,7 @@ refactor.
    answer into the guest's IAT. A handler that needs to observe mutable
    state cannot be a constant.
 3. **The guest entry point is entered with `WinMain` arguments already in
-   registers.** The CE loader does this, so PocketHLE does too:
+   registers.** The CE loader does this, so niobiumHLE does too:
    `r0 = hInstance` (`PROCESS_INSTANCE_HANDLE`), `r1 = 0`,
    `r2 = lpCmdLine`, `r3 = nCmdShow` (`SW_SHOWNORMAL`). `lpCmdLine` is
    **always a valid pointer** — empty `L""` when there are no arguments,
@@ -164,7 +164,7 @@ often ships one executable per 3D chip and leaves the choice to a setup
 DLL that runs at install time. Call of Duty 2's `SETUPDLL.999` probes
 `Software\NVIDIA Corporation\GFSDK` and `\Windows\wmv9decoder2700g.dll`,
 then renames `cod2_goforce.exe` or `cod2_gles.exe` over the `cod2.exe`
-its shortcut points at. PocketHLE runs no install-time DLLs, so following
+its shortcut points at. niobiumHLE runs no install-time DLLs, so following
 the shortcut lands on the software renderer — a correct run at 13.7 fps
 where the GoForce build does 39.1 fps on the same scenario, with the
 whole GL ES layer sitting unused.
@@ -387,7 +387,7 @@ still keeps to one stage.
 
 ## 7. Two guest toolchains
 
-PocketHLE loads images from both the MSVC-era official toolchains and the
+niobiumHLE loads images from both the MSVC-era official toolchains and the
 open-source CeGCC / mingw32ce one. They differ in ways that reach the
 loader:
 
@@ -734,7 +734,7 @@ If that line is absent, the problem is the host device, not the decoder.
 **The desktop GUI has no console on Windows.** `main.rs` is built with
 `windows_subsystem = "windows"` so launching it does not flash up a
 terminal, which also means stderr goes nowhere and log output reaches
-nobody. It therefore tees `log` to `<library root>/pockethle-gui.log`,
+nobody. It therefore tees `log` to `<library root>/niobiumhle-gui.log`,
 truncated per launch. When diagnosing "no sound in the GUI but the CLI
 is fine", read that file first — and prefer reproducing through the CLI,
 which has a console and takes the same code path.
@@ -824,16 +824,16 @@ Add a field to one side and add it to the other in the same change.
 ## 14. Working on this repo
 
 ```bash
-cargo build --release -p pocket-cli --features unicorn   # → target/release/pockethle
+cargo build --release -p pocket-cli --features unicorn   # → target/release/niobiumhle
 cargo test --workspace
 cargo clippy --workspace --all-targets
 
 # CeGCC smoke test — expect zero "unimplemented call" warnings
-./target/release/pockethle -v run hello.exe --cpu unicorn --max-slices 5000 \
+./target/release/niobiumhle -v run hello.exe --cpu unicorn --max-slices 5000 \
   --key 3:enter --dump-frames-to /tmp/hello-frames --max-frames 6
 
 # A GLES game, with the message cap lifted
-./target/release/pockethle -v run /tmp/cod2-install/cod2_gles.exe \
+./target/release/niobiumhle -v run /tmp/cod2-install/cod2_gles.exe \
   --rom-dir /tmp/cod2-install \
   --module-path '\Program Files\COD2\cod2_gles.exe' \
   --key 1:enter --key 2:enter --key 3:enter \

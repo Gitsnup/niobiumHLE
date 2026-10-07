@@ -1172,7 +1172,7 @@ pub fn register(d: &mut WinCeDispatcher) {
     d.register_constant(dll, "SipSetInfo", 1, one_returning);
     d.register_constant(dll, "SipStatus", 0, zero_returning);
     // `AllKeys(BOOL)` toggles whether the shell forwards every key
-    // (incl. Power / Today) to the foreground app. PocketHLE is
+    // (incl. Power / Today) to the foreground app. niobiumHLE is
     // single-app so the flag is a no-op; report success.
     d.register_constant(dll, "AllKeys", 1, one_returning);
 
@@ -1551,7 +1551,7 @@ fn qsort(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 // }
 // ```
 //
-// PocketHLE's HLE wrinkle: PE images built by the MSVC ARM/Thumb
+// niobiumHLE's HLE wrinkle: PE images built by the MSVC ARM/Thumb
 // toolchain (this is the case for every Pocket PC retail title)
 // generate `__security_check_cookie` as a *two*-step test, not a
 // straight equality:
@@ -2123,7 +2123,7 @@ fn sleep(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 /// `SuspendThread(HANDLE)` is used by Avalanche's cooperative worker
 /// control loop to pause a helper before it changes display state.
 ///
-/// PocketHLE already serializes guest threads at API boundaries, so the
+/// niobiumHLE already serializes guest threads at API boundaries, so the
 /// operation is represented by marking the synthetic thread as not ready;
 /// the current worker yields immediately and the main thread continues.
 fn suspend_thread(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
@@ -2366,7 +2366,7 @@ fn device_io_control(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelErr
     if code == IOCTL_DISK_GET_STORAGEID {
         let prefix = volume.prefix.clone();
         let serial = volume.serial();
-        let mfr = b"PocketHLE\0";
+        let mfr = b"niobiumHLE\0";
         let serial_text = format!("{serial}\0").into_bytes();
         let total = 16 + mfr.len() + serial_text.len();
         let mut reply = Vec::with_capacity(total);
@@ -2540,7 +2540,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
         } else {
             0
         };
-        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (PocketHLE AYGSHELL)");
+        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (niobiumHLE AYGSHELL)");
         return Ok(DispatchOutcome::ReturnedR0(handle));
     }
     if name.ends_with("gx.dll") || name == "gx" {
@@ -2567,7 +2567,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
         } else {
             0
         };
-        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (PocketHLE HSS)");
+        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (niobiumHLE HSS)");
         return Ok(DispatchOutcome::ReturnedR0(handle));
     }
     if name.ends_with("ole32.dll") || name == "ole32" {
@@ -2580,7 +2580,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
         } else {
             0
         };
-        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (PocketHLE OLE32)");
+        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (niobiumHLE OLE32)");
         return Ok(DispatchOutcome::ReturnedR0(handle));
     }
     if name.ends_with("imgdecmp.dll") || name == "imgdecmp" {
@@ -2589,7 +2589,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
         } else {
             0
         };
-        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (PocketHLE image decoder)");
+        log::debug!("LoadLibraryW({name:?}) -> 0x{handle:08x} (niobiumHLE image decoder)");
         return Ok(DispatchOutcome::ReturnedR0(handle));
     }
     if let Some(handle) = gles_module_handle(&name) {
@@ -2602,7 +2602,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
         } else {
             0
         };
-        log::info!("LoadLibraryW({name:?}) -> 0x{handle:08x} (PocketHLE GLES)");
+        log::info!("LoadLibraryW({name:?}) -> 0x{handle:08x} (niobiumHLE GLES)");
         return Ok(DispatchOutcome::ReturnedR0(handle));
     }
     // Already resident? CE hands back the same base and bumps the
@@ -2629,7 +2629,7 @@ fn load_library_w(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
 /// Map a satellite DLL found next to the game so its *resources* become
 /// reachable.
 ///
-/// PocketHLE never executes guest code out of a runtime-loaded module:
+/// niobiumHLE never executes guest code out of a runtime-loaded module:
 /// nothing resolves its exports, and the titles that call `LoadLibraryW`
 /// on a companion DLL (Solitaire + `pegcards.dll`, for instance) import
 /// no `GetProcAddress` — they only want `FindResourceW` / `LoadBitmapW` /
@@ -5685,7 +5685,7 @@ fn open_cstr_path(ctx: &mut CallCtx<'_>, path: &str, mode: &str) -> u32 {
     // mounts the extracted cabinet has the file one level up. The CLI
     // works around this by also mounting the `_setup.xml` install dir,
     // but the launcher (and `--rom-dir`) do not, which is why a title
-    // could run from `pockethle run game.cab` and fail from the library.
+    // could run from `niobiumhle run game.cab` and fail from the library.
     // Matching on the file name keeps both paths working without
     // hard-coding another per-title prefix.
     if let Some(basename) = normalized.rsplit('\\').next() {
@@ -6348,7 +6348,7 @@ fn do_alloc(ctx: &mut CallCtx<'_>, size: u32) -> Result<DispatchOutcome, KernelE
         let zeros = vec![0u8; size as usize];
         ctx.cpu.write_mem(user_ptr, &zeros)?;
     }
-    if std::env::var("POCKETHLE_TRACE_ALLOC").is_ok() && size >= 0x1000 {
+    if std::env::var("NIOBIUMHLE_TRACE_ALLOC").is_ok() && size >= 0x1000 {
         let lr = ctx.cpu.read_reg(pocket_cpu::regs::ArmReg::Lr).unwrap_or(0);
         eprintln!("[trace-alloc] ptr=0x{user_ptr:08x} size=0x{size:08x} lr=0x{lr:08x}");
     }
@@ -7815,7 +7815,7 @@ const KEY_REPEAT_INTERVAL_MS: u64 = 33;
 /// Fabricate the next `WM_KEYDOWN` repeat for a key the host is still
 /// holding, if one is due.
 ///
-/// Real Windows CE repeats a held key; PocketHLE's frontends send one
+/// Real Windows CE repeats a held key; niobiumHLE's frontends send one
 /// `KeyDown` per press, so a game that reads `WM_KEYDOWN` (rather than
 /// polling `GetAsyncKeyState`, which [`KernelState::pressed_keys`]
 /// already answers correctly) moved one step per press no matter how
@@ -14117,7 +14117,7 @@ fn sip_get_info(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
 
 // ---------- Clipboard (no-op stubs) ----------
 //
-// PocketHLE doesn't model a system clipboard; it's safe to behave
+// niobiumHLE doesn't model a system clipboard; it's safe to behave
 // as if we successfully opened an empty clipboard. The game just
 // won't be able to round-trip text through it.
 
@@ -14244,7 +14244,7 @@ fn wave_out_get_dev_caps(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, Kerne
     let size = ctx.arg_u32(2)?;
     if caps != 0 && size != 0 {
         let mut buf = vec![0u8; (size as usize).min(84)];
-        let name: Vec<u16> = "PocketHLE Wave Output".encode_utf16().collect();
+        let name: Vec<u16> = "niobiumHLE Wave Output".encode_utf16().collect();
         for (index, ch) in name.into_iter().take(31).enumerate() {
             let offset = 8 + index * 2;
             if offset + 2 <= buf.len() {

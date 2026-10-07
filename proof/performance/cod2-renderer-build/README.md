@@ -19,7 +19,7 @@ over `cod2.exe`; an Intel 2700G device, whose ROM carries
 `wmv9decoder2700g.dll`, gets `cod2_gles.exe`; a device with neither keeps
 the software build.
 
-PocketHLE runs no install-time DLLs, so it followed the shortcut and
+niobiumHLE runs no install-time DLLs, so it followed the shortcut and
 always launched the software build — a completely correct run in which
 the GL ES layer is never called and the game rasterises every pixel in
 emulated ARM code.
@@ -54,7 +54,7 @@ level", not as an image diff.
 
 ```sh
 cargo build --release -p pocket-cli --features unicorn
-pockethle run COD2SOInstaller.cab --cpu unicorn \
+niobiumhle run COD2SOInstaller.cab --cpu unicorn \
   --key 1:enter --key 2:enter --key 3:enter \
   --key 100:enter --key 200:enter --key 300:enter \
   --tap 420:224,73 --tap 600:224,73 --tap 800:120,160 --tap 1000:120,160 \
@@ -65,7 +65,7 @@ pockethle run COD2SOInstaller.cab --cpu unicorn \
 The first log line names the build that was picked:
 
 ```
-CAB COD2SOInstaller.cab -> /tmp/pockethle-cab-XXXXXX/cod2_goforce.exe (Aspyr Media / COD2)
+CAB COD2SOInstaller.cab -> /tmp/niobiumhle-cab-XXXXXX/cod2_goforce.exe (Aspyr Media / COD2)
 GetModuleFileNameW will report "\Program Files\COD2\cod2.exe"
 ```
 

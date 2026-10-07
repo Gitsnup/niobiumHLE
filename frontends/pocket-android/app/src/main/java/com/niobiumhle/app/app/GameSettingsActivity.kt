@@ -1,4 +1,4 @@
-package com.pockethle.app
+package com.niobiumhle.app
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -123,7 +123,7 @@ class GameSettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val EXTRA_GAME_ID = "com.pockethle.app.EXTRA_GAME_ID_SETTINGS"
-        const val EXTRA_GAME_NAME = "com.pockethle.app.EXTRA_GAME_NAME_SETTINGS"
+        const val EXTRA_GAME_ID = "com.niobiumhle.app.EXTRA_GAME_ID_SETTINGS"
+        const val EXTRA_GAME_NAME = "com.niobiumhle.app.EXTRA_GAME_NAME_SETTINGS"
     }
 }

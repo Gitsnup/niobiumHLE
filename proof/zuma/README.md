@@ -21,7 +21,7 @@ spinning:
 The only code in the image that ever writes `stop_ack` is the game's own
 `waveOutProc` at `0x000e896c`, which the driver calls with `WOM_DONE`.
 On WinCE the audio driver's thread makes that call, so the acknowledgement
-arrives while the game sleeps. PocketHLE only serviced the wave queue from
+arrives while the game sleeps. niobiumHLE only serviced the wave queue from
 `waveOutWrite` and from the message pump, and a `Sleep(0)` spin reaches
 neither — so the loop never ended. The game burned a full core forever
 after nine to eighty rendered frames, which looks like catastrophic
@@ -84,7 +84,7 @@ emulator-side captures, not photographs of a device.
 ```sh
 cargo build --release -p pocket-cli --features unicorn
 KEYS="--key 100:enter --key 160:enter --key 220:enter --key 300:enter --key 400:enter"
-POCKETHLE_PROFILE=1 ./target/release/pockethle run Games/Zuma_v1.50.cab \
+NIOBIUMHLE_PROFILE=1 ./target/release/niobiumhle run Games/Zuma_v1.50.cab \
     --cpu unicorn --screen 800x480 --message-budget 0 --max-slices 0 \
     --max-frames 4000 $KEYS
 ```

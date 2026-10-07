@@ -10,7 +10,7 @@ frame 230 and spent the rest of the run in its message pump
 complaining that the storage card had been removed, because the card's
 serial number read back as zero.
 
-- Test tool: `pockethle run` (`pocket-cli`, `--features unicorn`)
+- Test tool: `niobiumhle run` (`pocket-cli`, `--features unicorn`)
 - CPU: Unicorn ARM
 - Input: `Enter` (`VK_RETURN`) presses at frames 900, 1000, 1900, 2050, 2200, 2350, 2500, 2650 and 2800
 - Result: clean exit, 3000 captured frames, final `frame_counter=3000`
@@ -48,7 +48,7 @@ serial number read back as zero.
 
 - `cargo build --release -p pocket-cli --features unicorn` — passed.
 - `cargo test --workspace` — passed.
-- Run: `pockethle run Ball-Busters_Gizmondo_EN_Beta.zip --cpu unicorn
+- Run: `niobiumhle run Ball-Busters_Gizmondo_EN_Beta.zip --cpu unicorn
   --message-budget 0 --dump-frames-to <dir> --max-frames 3000
   --key 900:enter --key 1000:enter --key 1900:enter --key 2050:enter
   --key 2200:enter --key 2350:enter --key 2500:enter --key 2650:enter

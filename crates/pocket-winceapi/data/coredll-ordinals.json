@@ -1,6 +1,6 @@
 {
   "dll": "coredll.dll",
-  "_comment": "Authoritative ordinal->name map for Pocket PC 2003 / Windows CE 4.20 coredll.dll. Derived programmatically from the short-import objects in the PPC2003 SDK's armv4/coredll.lib (Microsoft Pocket PC 2003 SDK, archive.org). 1675 ordinals total. NOTE: WM5/6 uses a DIFFERENT numbering \u2014 pass --ordinal-map=<path> to PocketHLE to override at run time.",
+  "_comment": "Authoritative ordinal->name map for Pocket PC 2003 / Windows CE 4.20 coredll.dll. Derived programmatically from the short-import objects in the PPC2003 SDK's armv4/coredll.lib (Microsoft Pocket PC 2003 SDK, archive.org). 1675 ordinals total. NOTE: WM5/6 uses a DIFFERENT numbering \u2014 pass --ordinal-map=<path> to niobiumHLE to override at run time.",
   "ordinals": {
     "1": "SystemStarted",
     "2": "InitializeCriticalSection",

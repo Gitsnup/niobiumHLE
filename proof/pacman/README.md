@@ -1,6 +1,6 @@
 # Native ARM Windows Mobile rendering proof
 
-This is a headless PocketHLE run of the native ARM Windows Mobile / Pocket PC Pac-Man CAB used as a regression target for the message-pump and framebuffer path.
+This is a headless niobiumHLE run of the native ARM Windows Mobile / Pocket PC Pac-Man CAB used as a regression target for the message-pump and framebuffer path.
 
 - Target: legacy ARM PE32 executable, 240×320 portrait.
 - Result: the emulator reached the rendering path and advanced `frame_counter` from 0 to 5359 before exiting cleanly.

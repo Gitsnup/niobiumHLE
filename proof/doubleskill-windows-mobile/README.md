@@ -22,4 +22,4 @@ Result: **PASS** — exit status 0, clean emulator exit, `frame_counter=24`, 12 
 
 `contact-sheet.png` shows the startup-to-render sequence, including the game interface and control graphics. `first-render.png` is the first non-black render frame. The PPM files in `tap-frames/` and `startup.ppm` are lossless framebuffer evidence.
 
-The screenshots are PocketHLE emulator captures using the ARM Unicorn backend, not screenshots from a physical Windows Mobile device; no native Windows Mobile device emulator was available in the Linux host environment.
+The screenshots are niobiumHLE emulator captures using the ARM Unicorn backend, not screenshots from a physical Windows Mobile device; no native Windows Mobile device emulator was available in the Linux host environment.

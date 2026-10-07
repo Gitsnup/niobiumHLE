@@ -68,7 +68,7 @@ regression test. `cargo fmt --all -- --check` is clean.
 Run (ARM Unicorn backend):
 
 ```text
-pockethle run RaymanUltimateARM.exe \
+niobiumhle run RaymanUltimateARM.exe \
   --rom-dir RaymanUltimate \
   --module-path '\Application\RaymanUltimateARM.exe' \
   --cpu unicorn --message-budget 0 --dump-frames-to frames --max-frames 60
@@ -84,7 +84,7 @@ The requested tap helper also passes:
 
 ```text
 python3 tools/ai-tap-sequence.py RaymanUltimateARM.exe \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --max-frames 15 --max-slices 100000 --message-budget 0 \
   --dump-frames-to frames
 ```

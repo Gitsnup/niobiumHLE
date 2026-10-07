@@ -1,12 +1,12 @@
 <!--
-Copyright (C) 2026 PocketHLE Emulator Project
+Copyright (C) 2026 niobiumHLE Emulator Project
 SPDX-License-Identifier: Apache-2.0 OR MIT
 -->
 
-# PocketHLE
+# niobiumHLE
 
 <p align="center">
-  <img src="./frontends/pocket-desktop/assets/pockethle-logo.png" width="25%" alt="PocketHLE logo" />
+  <img src="./frontends/pocket-desktop/assets/niobiumhle-logo.png" width="25%" alt="niobiumHLE logo" />
 </p>
 
 <p align="center">
@@ -15,7 +15,7 @@ SPDX-License-Identifier: Apache-2.0 OR MIT
 
 <p align="center">
   <a href="https://discord.gg/jDvzctQdFu">
-    <img src="https://img.shields.io/badge/Discord-Join%20our%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the PocketHLE Discord community" />
+    <img src="https://img.shields.io/badge/Discord-Join%20our%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the niobiumHLE Discord community" />
   </a>
 </p>
 
@@ -28,14 +28,14 @@ SPDX-License-Identifier: Apache-2.0 OR MIT
 ---
 
 > [!NOTE]
-> PocketHLE targets native ARM Windows CE / Windows Mobile executables packaged in `.CAB` archives. Windows Phone `.XAP` packages (managed Silverlight / XNA images) are imported and identified, but the Silverlight application model they need to run is not implemented, so they cannot be played yet. It is experimental software: compatibility, performance and input behavior vary by game and host platform.
+> niobiumHLE targets native ARM Windows CE / Windows Mobile executables packaged in `.CAB` archives. Windows Phone `.XAP` packages (managed Silverlight / XNA images) are imported and identified, but the Silverlight application model they need to run is not implemented, so they cannot be played yet. It is experimental software: compatibility, performance and input behavior vary by game and host platform.
 
 > [!WARNING]
-> PocketHLE is developed for research and educational purposes. It does not include Microsoft system files, firmware or game data. Use only legally obtained game copies and archives.
+> niobiumHLE is developed for research and educational purposes. It does not include Microsoft system files, firmware or game data. Use only legally obtained game copies and archives.
 
 ## Info
 
-PocketHLE is an early-stage high-level emulator for Pocket PC 2002/2003 and Windows Mobile 5/6 games. Instead of emulating a complete Windows CE device, it loads the original game executable, runs its ARM code through a CPU backend, and provides clean-room host-side implementations of the Windows CE APIs the game expects.
+niobiumHLE is an early-stage high-level emulator for Pocket PC 2002/2003 and Windows Mobile 5/6 games. Instead of emulating a complete Windows CE device, it loads the original game executable, runs its ARM code through a CPU backend, and provides clean-room host-side implementations of the Windows CE APIs the game expects.
 
 The project is inspired by [touchHLE](https://github.com/touchHLE/touchHLE) and [EKA2L1](https://github.com/EKA2L1/EKA2L1), with a launcher and library workflow influenced by [j2me-loader](https://github.com/nikita36078/j2me-loader).
 
@@ -56,7 +56,7 @@ Additional compatibility probes and rendering captures are available under [`pro
 
 ## Status
 
-PocketHLE can currently:
+niobiumHLE can currently:
 
 * import and unpack Windows Mobile `.CAB` archives;
 * restore long filenames and installation paths from `_setup.xml`, or
@@ -73,7 +73,7 @@ PocketHLE can currently:
 
 The current reference proof demonstrates Asphalt 4 rendering at WVGA with captured PCM audio. Android also has a game launcher, fullscreen/orientation controls, display modes, per-game settings and a turbo control for titles that need accelerated startup.
 
-PocketHLE is not a full Windows CE emulator. Some games still stop during CRT initialization, dynamic imports, worker-thread setup or unimplemented APIs. A successful boot or first frame does not automatically mean that an entire game is playable from start to finish.
+niobiumHLE is not a full Windows CE emulator. Some games still stop during CRT initialization, dynamic imports, worker-thread setup or unimplemented APIs. A successful boot or first frame does not automatically mean that an entire game is playable from start to finish.
 
 ## Architecture
 
@@ -129,20 +129,20 @@ For command-line runs:
 
 ```bash
 # Inspect a cabinet
-pockethle inspect-cab ~/Games/Asphalt4.cab
+niobiumhle inspect-cab ~/Games/Asphalt4.cab
 
 # Run a cabinet; the launcher extracts and mounts its install directory
-pockethle run ~/Games/Asphalt4.cab
+niobiumhle run ~/Games/Asphalt4.cab
 
 # Run with the real ARM CPU backend and capture frames
-pockethle run ~/Games/Asphalt4.cab \
+niobiumhle run ~/Games/Asphalt4.cab \
   --cpu unicorn \
-  --dump-frames-to /tmp/pockethle-frames \
+  --dump-frames-to /tmp/niobiumhle-frames \
   --max-frames 8
 
 # Inspect or run an extracted executable
-pockethle pe-info /tmp/pockethle/Asphalt4.exe
-pockethle run /tmp/pockethle/Asphalt4.exe --cpu unicorn
+niobiumhle pe-info /tmp/niobiumhle/Asphalt4.exe
+niobiumhle run /tmp/niobiumhle/Asphalt4.exe --cpu unicorn
 ```
 
 The CLI also supports `.exe` and `.zip` inputs. Use `--cpu stub` for trace-only and loader tests; it does not execute real game instructions.
@@ -172,8 +172,8 @@ cargo build --release -p pocket-desktop --features unicorn
 
 The binaries are written to `target/release/`:
 
-* `pockethle` — command-line frontend;
-* `pockethle-gui` — desktop launcher.
+* `niobiumhle` — command-line frontend;
+* `niobiumhle-gui` — desktop launcher.
 
 ### Windows
 
@@ -185,7 +185,7 @@ cargo build --release -p pocket-cli --features unicorn
 cargo build --release -p pocket-desktop --features unicorn
 ```
 
-The resulting binaries are `target\release\pockethle.exe` and `target\release\pockethle-gui.exe`.
+The resulting binaries are `target\release\niobiumhle.exe` and `target\release\niobiumhle-gui.exe`.
 
 ### Android
 
@@ -222,7 +222,7 @@ Desktop and Android share the `pocket-library` model:
             └── ... game files ...
 ```
 
-On Linux and Windows, the default location is `~/.local/share/PocketHLE/library` or the platform equivalent. Android stores it under the app's external files directory.
+On Linux and Windows, the default location is `~/.local/share/niobiumHLE/library` or the platform equivalent. Android stores it under the app's external files directory.
 
 ## Roadmap
 
@@ -236,21 +236,21 @@ On Linux and Windows, the default location is `~/.local/share/PocketHLE/library`
 
 ## Legal notice
 
-PocketHLE does not contain or distribute copyrighted Microsoft system DLLs, firmware or game assets. The Windows CE API layer is a clean-room reimplementation based on public API behavior and ordinal data. Users are responsible for the games and archives they provide.
+niobiumHLE does not contain or distribute copyrighted Microsoft system DLLs, firmware or game assets. The Windows CE API layer is a clean-room reimplementation based on public API behavior and ordinal data. Users are responsible for the games and archives they provide.
 
 ## License
 
-PocketHLE is dual-licensed under [Apache-2.0](LICENSE-APACHE) **OR** [MIT](LICENSE-MIT), at your option.
+niobiumHLE is dual-licensed under [Apache-2.0](LICENSE-APACHE) **OR** [MIT](LICENSE-MIT), at your option.
 
 ## Contributing
 
 Bug reports, compatibility results, API traces and pull requests are welcome. Please include the game version, target screen size, frontend, CPU backend, command line and relevant logs or frame captures when reporting a problem.
 
-Join the [PocketHLE Discord community](https://discord.gg/pSjD428p2) for development updates, compatibility discussions and support.
+Join the [niobiumHLE Discord community](https://discord.gg/pSjD428p2) for development updates, compatibility discussions and support.
 
 ## Special Thanks
 
 * [touchHLE](https://github.com/touchHLE/touchHLE) for the high-level emulation model and project inspiration;
 * [EKA2L1](https://github.com/EKA2L1/EKA2L1) for another practical HLE-oriented emulator architecture;
 * [j2me-loader](https://github.com/nikita36078/j2me-loader) for launcher and library UX inspiration;
-* the PocketHLE contributors and testers who provide legally obtained software, traces and compatibility reports.
+* the niobiumHLE contributors and testers who provide legally obtained software, traces and compatibility reports.

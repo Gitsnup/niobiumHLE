@@ -103,7 +103,7 @@ fn jit_pure_loop_with_hooks() {
     run_loop("pure-2instr+hooks", &code, ITERATIONS, true);
 }
 
-/// Cost of one host round-trip — the thing PocketHLE pays for every
+/// Cost of one host round-trip — the thing niobiumHLE pays for every
 /// emulated WinCE API call, because each IAT thunk carries a code hook
 /// that calls `emu_stop`.
 ///
@@ -177,7 +177,7 @@ fn run_round_trips(label: &str, hooks: u32, round_trips: u64) {
 /// Same round-trip, but with the whole thunk pool covered by a single
 /// ranged code hook instead of one hook per thunk VA.
 ///
-/// PocketHLE registers a hook for every import *and* every dynamic
+/// niobiumHLE registers a hook for every import *and* every dynamic
 /// export it can serve through `GetProcAddress` (~5 000 for
 /// `coredll.dll` alone), so if Unicorn's per-`emu_start` cost grows
 /// with the length of the hook list, that list is the frame budget.
@@ -372,7 +372,7 @@ fn jit_four_stores() {
 /// has been cleared for that page, and `notdirty_write()` refuses to
 /// clear it while either (a) the TLB entry claims the page is
 /// executable or (b) any memory hook covers the address. With the ARM
-/// MMU disabled — which is how PocketHLE runs, since WinCE images are
+/// MMU disabled — which is how niobiumHLE runs, since WinCE images are
 /// loaded flat with no page tables — `get_phys_addr()` hands back
 /// `PAGE_READ|PAGE_WRITE|PAGE_EXEC` for *every* page, so (a) is always
 /// true and every guest store pays a ~42 ns helper call. A software

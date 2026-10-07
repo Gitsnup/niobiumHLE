@@ -1,5 +1,5 @@
 //! Auto-extraction of `.cab`, `.zip`, `.rar`, and `.xap` archives so that
-//! `pockethle run game.cab` (or `game.zip` / `game.rar` / `game.xap`) just works.
+//! `niobiumhle run game.cab` (or `game.zip` / `game.rar` / `game.xap`) just works.
 //!
 //! Pocket PC titles are almost always shipped as a single `.cab` that
 //! contains the executable, helper DLLs and game assets, or as a
@@ -76,7 +76,7 @@ pub struct Launcher {
 /// * anything else — treated as a PE on disk, no extraction.
 ///
 /// Returns an error if no ARM PE is found. The user can still call
-/// `pockethle pe-info` for diagnostics on a single file.
+/// `niobiumhle pe-info` for diagnostics on a single file.
 pub fn prepare(path: &Path) -> Result<Launcher> {
     let kind = ArchiveKind::detect(path);
     match kind {
@@ -251,7 +251,7 @@ fn extract_installshield_sfx_cab(source: &Path, destination: &Path) -> Result<()
 }
 
 fn prepare_installshield_sfx(path: &Path) -> Result<Launcher> {
-    let tmp = TempDir::with_prefix("pockethle-sfx-")
+    let tmp = TempDir::with_prefix("niobiumhle-sfx-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
     let file = File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut outer = zip::ZipArchive::new(file)
@@ -320,7 +320,7 @@ fn prepare_installshield_sfx(path: &Path) -> Result<Launcher> {
 }
 
 fn prepare_cab(path: &Path) -> Result<Launcher> {
-    let tmp = TempDir::with_prefix("pockethle-cab-")
+    let tmp = TempDir::with_prefix("niobiumhle-cab-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
     let (files, header) = pocket_core::cab::extract_with_header(path, tmp.path())
         .with_context(|| format!("extracting {}", path.display()))?;
@@ -930,7 +930,7 @@ pub fn save_id(path: &Path) -> String {
 /// Silverlight applications have no `Main`, the platform constructs
 /// their `Application` type through the navigation framework.
 fn prepare_xap(path: &Path) -> Result<Launcher> {
-    let tmp = TempDir::with_prefix("pockethle-xap-")
+    let tmp = TempDir::with_prefix("niobiumhle-xap-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
     let f = File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut archive =
@@ -1047,7 +1047,7 @@ fn prepare_xap(path: &Path) -> Result<Launcher> {
 }
 
 fn prepare_rar(path: &Path) -> Result<Launcher> {
-    let tmp = TempDir::with_prefix("pockethle-rar-")
+    let tmp = TempDir::with_prefix("niobiumhle-rar-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
     let archive = ArchiveReader::read_path(path)
         .map_err(|error| anyhow!("parsing rar {}: {}", path.display(), error))?;
@@ -1123,7 +1123,7 @@ fn safe_archive_path(raw: &[u8]) -> Option<PathBuf> {
 }
 
 fn prepare_zip(path: &Path) -> Result<Launcher> {
-    let tmp = TempDir::with_prefix("pockethle-zip-")
+    let tmp = TempDir::with_prefix("niobiumhle-zip-")
         .with_context(|| format!("creating temp dir for {}", path.display()))?;
     let f = File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut archive =
@@ -1167,7 +1167,7 @@ fn prepare_zip(path: &Path) -> Result<Launcher> {
     // entry is itself a `.cab` (or the desktop ActiveSync installer
     // bundles the .cab next to the desktop wrapper). Recurse into
     // any nested `.cab` so the user-facing UX is still
-    // "pockethle run game.zip".
+    // "niobiumhle run game.zip".
     if let Some(nested_cab) = written
         .iter()
         .find(|p| p.extension().and_then(|e| e.to_str()) == Some("cab"))
@@ -1327,7 +1327,7 @@ fn is_supported_guest_machine(machine: u16) -> bool {
     )
 }
 
-/// Walk `paths` and return the largest PE that PocketHLE can identify as
+/// Walk `paths` and return the largest PE that niobiumHLE can identify as
 /// a process entry point. Native ARM/MIPS images are handled by the HLE;
 /// managed WinCE images are retained so the loader can report the missing
 /// .NET Compact Framework runtime instead of claiming the cabinet is empty.
@@ -1624,11 +1624,11 @@ mod tests {
         // Ball Busters, Sticky Balls, Carmageddon — none named here.
         for id in ["gzga200045", "gzga200014", "GZGA200036"] {
             let entries = vec![
-                PathBuf::from(format!("/tmp/pockethle/{id}/{id}")),
-                PathBuf::from("/tmp/pockethle/game.exe"),
+                PathBuf::from(format!("/tmp/niobiumhle/{id}/{id}")),
+                PathBuf::from("/tmp/niobiumhle/game.exe"),
             ];
             assert!(
-                is_gizmondo_layout(&entries, Path::new("/tmp/pockethle/game.exe")),
+                is_gizmondo_layout(&entries, Path::new("/tmp/niobiumhle/game.exe")),
                 "{id} should be recognised as a Gizmondo card layout"
             );
         }
@@ -1639,17 +1639,17 @@ mod tests {
         // The ID directory alone is not enough — the serial file inside it
         // carrying the same name is what the title actually reads.
         assert!(!is_gizmondo_layout(
-            &[PathBuf::from("/tmp/pockethle/gzga200045/vsdata.cfl")],
-            Path::new("/tmp/pockethle/game.exe")
+            &[PathBuf::from("/tmp/niobiumhle/gzga200045/vsdata.cfl")],
+            Path::new("/tmp/niobiumhle/game.exe")
         ));
         // A same-named file somewhere else is not the pair either.
         assert!(!is_gizmondo_layout(
-            &[PathBuf::from("/tmp/pockethle/data/gzga200045")],
-            Path::new("/tmp/pockethle/game.exe")
+            &[PathBuf::from("/tmp/niobiumhle/data/gzga200045")],
+            Path::new("/tmp/niobiumhle/game.exe")
         ));
         assert!(!is_gizmondo_layout(
-            &[PathBuf::from("/tmp/pockethle/game.exe")],
-            Path::new("/tmp/pockethle/game.exe")
+            &[PathBuf::from("/tmp/niobiumhle/game.exe")],
+            Path::new("/tmp/niobiumhle/game.exe")
         ));
     }
 
@@ -1658,16 +1658,16 @@ mod tests {
     #[test]
     fn gizmondo_layout_still_accepts_alien_hominid_by_name() {
         let entries = vec![
-            PathBuf::from("/tmp/pockethle/Data/Sky.bmp"),
-            PathBuf::from("/tmp/pockethle/Alien Hominid.exe"),
+            PathBuf::from("/tmp/niobiumhle/Data/Sky.bmp"),
+            PathBuf::from("/tmp/niobiumhle/Alien Hominid.exe"),
         ];
         assert!(is_gizmondo_layout(
             &entries,
-            Path::new("/tmp/pockethle/Alien Hominid.exe")
+            Path::new("/tmp/niobiumhle/Alien Hominid.exe")
         ));
         assert!(!is_gizmondo_layout(
             &entries,
-            Path::new("/tmp/pockethle/Autorun.exe")
+            Path::new("/tmp/niobiumhle/Autorun.exe")
         ));
     }
 

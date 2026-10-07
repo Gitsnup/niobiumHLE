@@ -1,7 +1,7 @@
 //! Stateful GDI object table.
 //!
 //! Win32 GDI exposes `HDC`, `HBITMAP`, `HBRUSH`, `HPEN`, `HFONT` as
-//! opaque handles. PocketHLE used to return a fake non-zero handle
+//! opaque handles. niobiumHLE used to return a fake non-zero handle
 //! per `Create*` call and never tracked any of them; calls to the
 //! actual rendering primitives were therefore no-ops. This module
 //! adds a minimal but real implementation of the parts that
@@ -741,7 +741,7 @@ impl<'a> Surface<'a> {
 /// function of three inputs: the **pattern** (selected brush), the
 /// **source** pixel and the **destination** pixel. The low three bytes
 /// encode the operation as a stack program for real GDI's interpreter;
-/// PocketHLE only needs the truth table, so it evaluates the high byte
+/// niobiumHLE only needs the truth table, so it evaluates the high byte
 /// directly and therefore supports all 256 codes rather than a
 /// hand-written subset.
 pub mod rop3 {

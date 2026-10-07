@@ -2,7 +2,7 @@
 
 ## Root cause
 
-The supplied `Cybersaurus_trial.CAB` contains an ARM Pocket PC executable. The baseline reached `GXOpenDisplay`, produced one startup frame, then stopped at `max_slices=3,000,000` with the cooperative scheduler running the audio worker continuously. The worker's `WaitForSingleObject` waited on a semaphore returned by `CreateSemaphoreW`, but PocketHLE modeled that API as a constant fake handle and modeled `ReleaseSemaphore` as an unconditional success. The semaphore had no state, so the wait could not represent the device's synchronization point and the main thread never received CPU time for subsequent GAPI frames.
+The supplied `Cybersaurus_trial.CAB` contains an ARM Pocket PC executable. The baseline reached `GXOpenDisplay`, produced one startup frame, then stopped at `max_slices=3,000,000` with the cooperative scheduler running the audio worker continuously. The worker's `WaitForSingleObject` waited on a semaphore returned by `CreateSemaphoreW`, but niobiumHLE modeled that API as a constant fake handle and modeled `ReleaseSemaphore` as an unconditional success. The semaphore had no state, so the wait could not represent the device's synchronization point and the main thread never received CPU time for subsequent GAPI frames.
 
 The fix adds guest-visible semaphore state to `KernelState`, implements `CreateSemaphoreW` and `ReleaseSemaphore`, consumes semaphore counts in `WaitForSingleObject`, and keeps the existing GAPI presentation path unchanged. This is why `frame_counter` now advances from `1` to `12+` and the rendered menu becomes visible.
 
@@ -23,7 +23,7 @@ The repository test helper was run against the supplied CAB:
 ```text
 python3 tools/ai-tap-sequence.py \
   <extracted>/CBS_1.0_PPC_Trial/Cybersaurus_trial.CAB \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --cpu unicorn \
   --max-slices 3000000 \
   --instructions-per-slice 1000000 \

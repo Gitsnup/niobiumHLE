@@ -339,7 +339,7 @@ impl RenderTarget {
     }
 
     /// Convert the colour buffer to RGB565 little-endian, the format the
-    /// PocketHLE framebuffer holds. Alpha is dropped: the window surface
+    /// niobiumHLE framebuffer holds. Alpha is dropped: the window surface
     /// is opaque.
     pub fn to_rgb565(&self, out: &mut [u8]) {
         for (i, px) in self.color.chunks_exact(4).enumerate() {

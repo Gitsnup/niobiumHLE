@@ -3,7 +3,7 @@
 //! Pocket PC games built on the Hekkus Sound System ship their music as
 //! 4-channel Amiga modules — JumpyBall's `.tkm` files are ordinary
 //! Protracker modules under a game-specific extension. HSS renders them
-//! on the device; PocketHLE renders them here and hands the result to
+//! on the device; niobiumHLE renders them here and hands the result to
 //! [`crate::audio::AudioEngine`] as an ordinary looping voice, which is
 //! why nothing in this file knows about guest memory.
 //!

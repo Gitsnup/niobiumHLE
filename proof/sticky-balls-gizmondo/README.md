@@ -9,7 +9,7 @@ clouds came out as opaque white sheets, every ball had a hard square of
 solid colour around it, and the whole scene was a portrait crop of a
 landscape layout with the HUD off the edge of the screen.
 
-- Test tool: `pockethle run` (`pocket-cli`, `--features unicorn`)
+- Test tool: `niobiumhle run` (`pocket-cli`, `--features unicorn`)
 - CPU: Unicorn ARM
 - Input: `Enter` (`VK_RETURN`) presses at frames 900, 1000, 1150, 1300, 1500, 1700 and 1900
 - Result: clean exit, 2000 captured frames, final `frame_counter=4898`
@@ -50,7 +50,7 @@ Three separate causes, all visible in `contact-sheet.png`:
   `a_second_stage_alpha_mask_cuts_out_a_colour_map_that_has_no_alpha`,
   `a_later_stage_combines_with_the_colour_the_earlier_one_produced` and
   `a_gizmondo_card_comes_up_on_the_devices_landscape_screen`.
-- Run: `pockethle run Sticky-Balls_Gizmondo_EN.zip --cpu unicorn
+- Run: `niobiumhle run Sticky-Balls_Gizmondo_EN.zip --cpu unicorn
   --message-budget 0 --dump-frames-to <dir> --max-frames 2000
   --key 900:0x0d --key 1000:0x0d --key 1150:0x0d --key 1300:0x0d
   --key 1500:0x0d --key 1700:0x0d --key 1900:0x0d` — see `run.log`.

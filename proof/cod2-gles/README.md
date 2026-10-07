@@ -1,6 +1,6 @@
 # Call of Duty 2 (Windows Mobile): OpenGL ES proof
 
-First game booted through PocketHLE's OpenGL ES 1.x layer. COD2 imports
+First game booted through niobiumHLE's OpenGL ES 1.x layer. COD2 imports
 `libgles_cl.dll` — 40 symbols, every one by ordinal, no names in the PE
 import directory — so the whole run goes through the Common-Lite
 ordinal table in `pocket-gles`.
@@ -17,7 +17,7 @@ cargo run --release -p pocket-cli -- \
   --max-slices 8000000
 ```
 
-The game ships its own software `libGLES_CM.dll`; PocketHLE shadows it
+The game ships its own software `libGLES_CM.dll`; niobiumHLE shadows it
 so the guest binds to our implementation instead. `GetProcAddress` on
 `libGLES_CL.dll` / `libGLES_CM.dll` resolves against per-DLL export
 tables keyed by fake HMODULEs, which is what makes the shadowing work

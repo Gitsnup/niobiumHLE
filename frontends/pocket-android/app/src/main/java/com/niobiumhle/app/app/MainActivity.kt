@@ -1,4 +1,4 @@
-package com.pockethle.app
+package com.niobiumhle.app
 
 import android.content.Intent
 import android.net.Uri

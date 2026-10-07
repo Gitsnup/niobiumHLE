@@ -5,7 +5,7 @@
 //! across devices: `GXOpenDisplay` once, `GXBeginDraw` to obtain a
 //! pointer to the back-buffer, write pixels, `GXEndDraw` to flush.
 //!
-//! PocketHLE backs this with the same software [`Framebuffer`] that
+//! niobiumHLE backs this with the same software [`Framebuffer`] that
 //! the GDI handlers paint into. We map an extra page-aligned region
 //! at [`SYNTHETIC_FB_BASE`] in the guest VA space lazily, on the
 //! first call to `GXOpenDisplay`, so the guest can write pixels
@@ -264,7 +264,7 @@ fn gx_get_default_keys(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelE
     // button + three soft keys. Returning all-zero (i.e. "vk = 0")
     // tells games every key is unmapped, which is why JumpyBall and
     // similar PPC titles never advance past the title screen under
-    // PocketHLE — their menu logic short-circuits when the key list
+    // niobiumHLE — their menu logic short-circuits when the key list
     // is degenerate. We return the canonical Windows Mobile defaults
     // matching the PPC2003 SDK header `gx.h` order:
     //   vkUp, vkDown, vkLeft, vkRight, vkA, vkB, vkC, vkStart.

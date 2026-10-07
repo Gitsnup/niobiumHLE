@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Game library / configuration management for PocketHLE GUI frontends."
+description = "Game library / configuration management for niobiumHLE GUI frontends."
 
 [dependencies]
 anyhow.workspace = true

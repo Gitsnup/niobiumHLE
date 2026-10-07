@@ -2,7 +2,7 @@
 
 ## Root cause
 
-The ARM CAB imports `coredll.dll!GetUpdateRect` (ordinal 274) and calls it from its `WM_PAINT` handler before `BeginPaint`. PocketHLE had the ordinal in the WinCE export table but had not registered a handler. The call therefore followed the unimplemented API path, the paint handler discarded the update, and `frame_counter` remained zero.
+The ARM CAB imports `coredll.dll!GetUpdateRect` (ordinal 274) and calls it from its `WM_PAINT` handler before `BeginPaint`. niobiumHLE had the ordinal in the WinCE export table but had not registered a handler. The call therefore followed the unimplemented API path, the paint handler discarded the update, and `frame_counter` remained zero.
 
 ## Fix
 
@@ -15,7 +15,7 @@ The full workspace test suite passed: 1 + 6 + 3 + 3 + 2 + 105 + 77 + 19 + 4 + 69
 The ARM run used the supplied `MineSweeper.ppc30_arm-0cf933e540ef.CAB`:
 
 ```text
-Final framebuffer snapshot written to /tmp/pockethle-final.ppm (230415 bytes, frame_counter=15)
+Final framebuffer snapshot written to /tmp/niobiumhle-final.ppm (230415 bytes, frame_counter=15)
 Emulator exited cleanly.
 ```
 
@@ -26,10 +26,10 @@ The requested tap helper was run with two taps at `(120,160)` and `(120,220)`:
 ```text
 Queued synthetic tap at (120,160)
 Queued synthetic tap at (120,220)
-Final framebuffer snapshot written to /tmp/pockethle-final.ppm (230415 bytes, frame_counter=23)
+Final framebuffer snapshot written to /tmp/niobiumhle-final.ppm (230415 bytes, frame_counter=23)
 Emulator exited cleanly.
 ```
 
 The machine-readable API trace is in `api-trace.jsonl`; it records the successful `GetUpdateRect` → `BeginPaint` → seven `BitBlt` calls. `tap-sequence-contact.png` is a contact sheet of the eight captured frames from the two-tap run. `final-tap-sequence.png` is a contact sheet of the 12 captured frames from the later two-tap run.
 
-The repository does not provide a Windows Mobile Device Emulator or physical device in this Linux environment. The screenshots are therefore PocketHLE emulator framebuffer captures, not photographs of native hardware.
+The repository does not provide a Windows Mobile Device Emulator or physical device in this Linux environment. The screenshots are therefore niobiumHLE emulator framebuffer captures, not photographs of native hardware.

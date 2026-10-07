@@ -945,8 +945,8 @@ fn gl_get_floatv(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> 
 fn gl_get_string(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
     let name = ctx.arg_u32(0)?;
     let text = match name {
-        pocket_gles::GL_VENDOR => "PocketHLE",
-        pocket_gles::GL_RENDERER => "PocketHLE Software Rasterizer",
+        pocket_gles::GL_VENDOR => "niobiumHLE",
+        pocket_gles::GL_RENDERER => "niobiumHLE Software Rasterizer",
         pocket_gles::GL_VERSION => "OpenGL ES-CL 1.1",
         pocket_gles::GL_EXTENSIONS => {
             "GL_AMD_compressed_ATC_texture GL_ATI_texture_compression_atitc GL_EXT_texture_compression_s3tc GL_EXT_texture_compression_dxt1 GL_EXT_texture_lod_bias GL_SGIS_texture_lod GL_OES_compressed_paletted_texture"
@@ -1107,7 +1107,7 @@ fn egl_initialize(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
     if minor != 0 {
         ctx.cpu.write_mem(minor, &1i32.to_le_bytes())?;
     }
-    log::info!("eglInitialize() -> EGL 1.1 (PocketHLE software)");
+    log::info!("eglInitialize() -> EGL 1.1 (niobiumHLE software)");
     Ok(DispatchOutcome::ReturnedR0(EGL_TRUE))
 }
 
@@ -1269,8 +1269,8 @@ fn egl_get_error(_ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError>
 fn egl_query_string(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelError> {
     let name = ctx.arg_u32(1)?;
     let text = match name {
-        EGL_VENDOR => "PocketHLE",
-        EGL_VERSION => "1.1 PocketHLE",
+        EGL_VENDOR => "niobiumHLE",
+        EGL_VERSION => "1.1 niobiumHLE",
         EGL_EXTENSIONS => "",
         _ => {
             set_egl_error(pocket_gles::EGL_BAD_PARAMETER);

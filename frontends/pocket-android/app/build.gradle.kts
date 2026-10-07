@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.pockethle.app"
+    namespace = "com.niobiumhle.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.pockethle.app"
+        applicationId = "com.niobiumhle.app"
         minSdk = 24
         targetSdk = 34
         versionCode = 2

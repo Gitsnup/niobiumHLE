@@ -1,4 +1,4 @@
-package com.pockethle.app
+package com.niobiumhle.app
 
 import android.content.Context
 import java.io.File
@@ -9,7 +9,7 @@ import java.io.File
  */
 object LibraryPaths {
     /**
-     * Root directory of the local PocketHLE library. Sits under
+     * Root directory of the local niobiumHLE library. Sits under
      * the app's external files dir so users can browse/back-up
      * `library.json`, `config.json`, and the per-game `extracted/`
      * folders without root.

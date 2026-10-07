@@ -1,4 +1,4 @@
-//! Cross-platform desktop launcher GUI for PocketHLE.
+//! Cross-platform desktop launcher GUI for niobiumHLE.
 //!
 //! Targets Linux and Windows. The interface is deliberately modeled
 //! after [`j2me-loader`](https://github.com/nikita36078/j2me-loader): a
@@ -47,7 +47,7 @@ impl std::io::Write for Tee {
     }
 }
 
-/// Start logging, teeing to `<library root>/pockethle-gui.log` when that
+/// Start logging, teeing to `<library root>/niobiumhle-gui.log` when that
 /// file can be opened. The log is truncated on every launch: it exists
 /// to explain the run the user just did, and an append-forever file in
 /// a user data directory grows without anyone watching it.
@@ -55,7 +55,7 @@ fn init_logging(library_root: &std::path::Path) -> Option<std::path::PathBuf> {
     let mut builder =
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"));
     let _ = std::fs::create_dir_all(library_root);
-    let path = library_root.join("pockethle-gui.log");
+    let path = library_root.join("niobiumhle-gui.log");
     let opened = std::fs::File::create(&path).ok();
     let result = opened.is_some().then(|| path.clone());
     if let Some(file) = opened {
@@ -72,10 +72,10 @@ fn main() -> Result<()> {
     if let Some(path) = log_path {
         log::info!("Logging to {}", path.display());
     }
-    let library = Library::open(&library_root).context("opening PocketHLE library")?;
+    let library = Library::open(&library_root).context("opening niobiumHLE library")?;
 
-    let icon = image::load_from_memory(include_bytes!("../assets/pockethle_logo.png"))
-        .context("decoding PocketHLE logo")?
+    let icon = image::load_from_memory(include_bytes!("../assets/niobiumhle_logo.png"))
+        .context("decoding niobiumHLE logo")?
         .to_rgba8();
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
@@ -87,12 +87,12 @@ fn main() -> Result<()> {
             .with_inner_size([960.0, 600.0])
             .with_min_inner_size([640.0, 420.0])
             .with_fullscreen(library.config().fullscreen)
-            .with_title("PocketHLE"),
+            .with_title("niobiumHLE"),
         ..Default::default()
     };
     let mut library_slot = Some(library);
     eframe::run_native(
-        "PocketHLE",
+        "niobiumHLE",
         native_options,
         Box::new(move |cc| {
             let lib = library_slot.take().expect("PocketLauncher built twice");

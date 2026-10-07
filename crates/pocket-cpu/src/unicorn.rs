@@ -108,9 +108,9 @@ impl UnicornCpu {
                 },
             );
         }
-        if let Ok(spec) = std::env::var("POCKETHLE_WATCH_MEM") {
+        if let Ok(spec) = std::env::var("NIOBIUMHLE_WATCH_MEM") {
             let parse = |t: &str| u64::from_str_radix(t.trim().trim_start_matches("0x"), 16).ok();
-            let want_value = std::env::var("POCKETHLE_WATCH_VAL")
+            let want_value = std::env::var("NIOBIUMHLE_WATCH_VAL")
                 .ok()
                 .and_then(|v| parse(&v));
             for token in spec.split(',') {
@@ -159,7 +159,7 @@ impl UnicornCpu {
 /// page tables, and return that table.
 ///
 /// This is the single biggest win available to a software-rendered
-/// Pocket PC game. PocketHLE loads WinCE images flat and never builds
+/// Pocket PC game. niobiumHLE loads WinCE images flat and never builds
 /// ARM page tables, so guest code runs with the MMU off — and QEMU's
 /// MMU-disabled path hands back `PAGE_READ | PAGE_WRITE | PAGE_EXEC`
 /// for *every* page. A page QEMU believes is executable keeps its
@@ -181,13 +181,13 @@ impl UnicornCpu {
 /// installs the `MEM_INVALID` hook when this returns `None`: fault
 /// addresses are recorded here instead, and with the access type.
 ///
-/// Set `POCKETHLE_CPU_TLB=1` to keep Unicorn's architectural TLB, which
+/// Set `NIOBIUMHLE_CPU_TLB=1` to keep Unicorn's architectural TLB, which
 /// restores the pre-optimisation behaviour exactly.
 fn install_virtual_tlb(
     uc: &mut Unicorn<'static, ()>,
     last_fault: &Rc<RefCell<Option<(String, u64)>>>,
 ) -> Option<Rc<RefCell<GuestMap>>> {
-    if std::env::var_os("POCKETHLE_CPU_TLB").is_some() {
+    if std::env::var_os("NIOBIUMHLE_CPU_TLB").is_some() {
         return None;
     }
     if uc.ctl_set_tlb_type(TlbType::VIRTUAL).is_err() {
@@ -308,11 +308,11 @@ fn map_mips_reg(r: ArmReg) -> RegisterMIPS {
 /// stop requests still get a turn on any normal game frame. The
 /// watchdog is only a safety net for a pathological guest that loops
 /// forever without ever calling an API; set
-/// `POCKETHLE_SLICE_TIMEOUT_MS` to enable it.
+/// `NIOBIUMHLE_SLICE_TIMEOUT_MS` to enable it.
 fn slice_watchdog_us() -> u64 {
     static CACHED: OnceLock<u64> = OnceLock::new();
     *CACHED.get_or_init(|| {
-        std::env::var("POCKETHLE_SLICE_TIMEOUT_MS")
+        std::env::var("NIOBIUMHLE_SLICE_TIMEOUT_MS")
             .ok()
             .and_then(|v| v.trim().parse::<u64>().ok())
             .map(|ms| ms.saturating_mul(1000))

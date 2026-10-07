@@ -1,6 +1,6 @@
-# PocketHLE — start here
+# niobiumHLE — start here
 
-PocketHLE runs Windows CE / Windows Mobile applications by **high-level
+niobiumHLE runs Windows CE / Windows Mobile applications by **high-level
 emulation**: guest ARM (or MIPS) code is executed instruction-by-instruction,
 but every call into a Windows CE DLL is intercepted at the import boundary and
 serviced by clean-room Rust. There is no emulated `coredll.dll`, no emulated
@@ -27,7 +27,7 @@ Four things worth knowing before you even open it:
   title. Match that.
 
 ```bash
-cargo build --release -p pocket-cli --features unicorn   # → target/release/pockethle
+cargo build --release -p pocket-cli --features unicorn   # → target/release/niobiumhle
 cargo test --workspace
 cargo clippy --workspace --all-targets
 ```

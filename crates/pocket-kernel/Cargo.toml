@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Process model, virtual memory and IAT-thunk management for PocketHLE."
+description = "Process model, virtual memory and IAT-thunk management for niobiumHLE."
 
 [features]
 default = ["audio-cpal"]

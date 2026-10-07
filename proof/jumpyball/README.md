@@ -9,7 +9,7 @@ ever reached the audio engine. The game had no way to tell.
 ## Run
 
 ```sh
-RUST_LOG=pocket_winceapi::hss=debug ./target/release/pockethle -v run \
+RUST_LOG=pocket_winceapi::hss=debug ./target/release/niobiumhle -v run \
   /tmp/jb-lib/games/jumpyballppc/extracted/JumpyBall.exe \
   --rom-dir /tmp/jb-lib/games/jumpyballppc/extracted \
   --rom-prefix '\Program Files\PocketNew\JumpyBall\' \
@@ -21,7 +21,7 @@ RUST_LOG=pocket_winceapi::hss=debug ./target/release/pockethle -v run \
 ```
 
 Set up the guest tree with
-`POCKETHLE_LIBRARY=/tmp/jb-lib ./target/release/pockethle import JumpyBallPPC.cab`,
+`NIOBIUMHLE_LIBRARY=/tmp/jb-lib ./target/release/niobiumhle import JumpyBallPPC.cab`,
 which restores the CAB's 8.3 names (`00music1.006`) to real ones
 (`Musics/music1.tkm`). Note `unpack-cab` takes its output directory
 positionally, not as `--out`.

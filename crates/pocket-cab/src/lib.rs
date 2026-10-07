@@ -1,4 +1,4 @@
-//! `.CAB` archive extractor used by PocketHLE.
+//! `.CAB` archive extractor used by niobiumHLE.
 //!
 //! Pocket PC / Windows Mobile applications are typically distributed as
 //! `.CAB` archives that contain the actual `.exe`, bundled DLLs, sound
@@ -10,7 +10,7 @@
 //! * Best-effort detection of the WinCE install header (the file with the
 //!   `.000` extension) which lists the canonical executable / DLL names.
 //!
-//! Note: PocketHLE never ships any copyrighted game data — the user
+//! Note: niobiumHLE never ships any copyrighted game data — the user
 //! supplies the `.cab` themselves.
 
 #![allow(clippy::chunks_exact_to_as_chunks)]
@@ -1285,7 +1285,7 @@ fn parse_setup_integer(raw: &str) -> Option<u32> {
 /// first. This is the canonical implementation: both the launcher
 /// library's import path and the CLI's throwaway-extract path go through
 /// the same rename map so a game imported into the library behaves
-/// exactly like one passed to `pockethle run` directly.
+/// exactly like one passed to `niobiumhle run` directly.
 ///
 /// Copies (rather than links) are used so the directory stays
 /// self-contained. Failures are logged and skipped: the short-name file

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PocketHLE</string>
+    <string name="app_name">niobiumHLE</string>
     <string name="settings_title">Settings</string>
     <string name="game_settings_title">Game settings</string>
     <string name="about_title">About</string>
@@ -69,7 +69,7 @@
     <string name="pref_rotation_title">Rotate display</string>
     <string name="pref_rotation_summary">Turn the picture without changing what the game thinks its screen is. Use 90° for a landscape game that only renders correctly at 240x320.</string>
     <string name="pref_halt_unimpl_title">Halt on unimplemented API</string>
-    <string name="pref_halt_unimpl_summary">Stop the emulator the first time the guest hits an API that PocketHLE has not yet implemented.</string>
+    <string name="pref_halt_unimpl_summary">Stop the emulator the first time the guest hits an API that niobiumHLE has not yet implemented.</string>
 
     <string-array name="cpu_backend_entries">
         <item>Stub (safe)</item>

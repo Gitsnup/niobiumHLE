@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Microsoft .CAB extractor wrapper for PocketHLE."
+description = "Microsoft .CAB extractor wrapper for niobiumHLE."
 
 [dependencies]
 anyhow.workspace = true

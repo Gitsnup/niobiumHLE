@@ -630,7 +630,7 @@ impl AudioEngine {
     }
 
     /// Tee every submitted sample into a 16-bit PCM WAV file. Used by
-    /// `pockethle run --dump-audio-to` so a run on a machine with no
+    /// `niobiumhle run --dump-audio-to` so a run on a machine with no
     /// sound card can still prove the game produced audio.
     pub fn capture_to(&self, path: &std::path::Path) -> std::io::Result<()> {
         let capture = WavCapture::create(path)?;
@@ -664,7 +664,7 @@ impl AudioEngine {
         let shutdown = Arc::clone(&self.shutdown);
         shutdown.store(false, std::sync::atomic::Ordering::SeqCst);
         let handle = match std::thread::Builder::new()
-            .name("pockethle-audio".to_string())
+            .name("niobiumhle-audio".to_string())
             .spawn(move || run_audio_worker(shared, shutdown))
         {
             Ok(handle) => Some(handle),

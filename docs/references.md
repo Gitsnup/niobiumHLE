@@ -1,7 +1,7 @@
 # Reference resources
 
 This document collects external resources that are useful when working on
-PocketHLE — Windows Mobile / Pocket PC emulators, SDKs, and the relevant ARM
+niobiumHLE — Windows Mobile / Pocket PC emulators, SDKs, and the relevant ARM
 and PE/COFF specifications.
 
 The links here are **for reference only**. Nothing in this repository
@@ -11,7 +11,7 @@ their own legally obtained copies.
 ## Microsoft emulators and SDKs
 
 These images / installers contain official Microsoft device emulators and
-Pocket PC / Windows Mobile SDKs that are useful for cross-checking PocketHLE's
+Pocket PC / Windows Mobile SDKs that are useful for cross-checking niobiumHLE's
 behaviour against the real platform (e.g. running the same `.cab` inside the
 official Microsoft Device Emulator and comparing API behaviour).
 
@@ -32,7 +32,7 @@ official Microsoft Device Emulator and comparing API behaviour).
 
 ## ARM architecture
 
-PocketHLE runs ARMv4T / ARMv5TE code (the variants supported by Pocket PC
+niobiumHLE runs ARMv4T / ARMv5TE code (the variants supported by Pocket PC
 2002, 2003 and Windows Mobile 5/6 devices). Pocket PC 2003 binaries make
 heavy use of the Thumb instruction set, so both manuals matter.
 

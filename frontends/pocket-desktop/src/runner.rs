@@ -31,7 +31,7 @@ impl Runner {
         Self::default()
     }
 
-    /// Run a managed image through the `pockethle` CLI's managed-runtime
+    /// Run a managed image through the `niobiumhle` CLI's managed-runtime
     /// path (`--managed-duration 0` keeps it alive until the game exits).
     ///
     /// The GUI drives the ARM emulator directly and has no managed runtime
@@ -39,12 +39,12 @@ impl Runner {
     /// `MONO_PATH` at the compatibility assemblies and host a display, so
     /// delegating keeps one managed implementation instead of forking it.
     fn run_managed_via_cli(exe: &Path, mut summary_lines: Vec<String>) -> RunOutcome {
-        summary_lines.push("Managed image: delegating to the pockethle CLI runtime.".to_string());
+        summary_lines.push("Managed image: delegating to the niobiumhle CLI runtime.".to_string());
         let cli = std::env::current_exe()
             .ok()
-            .and_then(|path| path.parent().map(|dir| dir.join("pockethle")))
+            .and_then(|path| path.parent().map(|dir| dir.join("niobiumhle")))
             .filter(|path| path.exists())
-            .unwrap_or_else(|| PathBuf::from("pockethle"));
+            .unwrap_or_else(|| PathBuf::from("niobiumhle"));
         let status = std::process::Command::new(&cli)
             .arg("run")
             .arg(exe)

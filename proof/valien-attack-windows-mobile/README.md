@@ -4,7 +4,7 @@ Source: `SetupvAlienAttack-spaces.im-2ec7b3cd4177.cab`
 
 ## Result
 
-The game now launches and reaches gameplay under PocketHLE's managed
+The game now launches and reaches gameplay under niobiumHLE's managed
 runtime, including the tap sequence required by
 `tools/ai-tap-sequence.py`. Screenshot evidence:
 
@@ -46,7 +46,7 @@ produced no frames at all — the observed "frame_counter stays 0".
 ```
 python3 tools/ai-tap-sequence.py \
   /home/.z/chat-uploads/SetupvAlienAttack-spaces.im-2ec7b3cd4177.cab \
-  --pockethle target/release/pockethle --cpu unicorn \
+  --niobiumhle target/release/niobiumhle --cpu unicorn \
   --message-budget 0 --max-slices 100000 --max-frames 5 \
   --screen 240x320 --tap 12,8 --tap 120,200 \
   --dump-frames-to proof/valien-attack-windows-mobile/tap-frames

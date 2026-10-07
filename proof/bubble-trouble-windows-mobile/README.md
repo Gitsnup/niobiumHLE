@@ -2,13 +2,13 @@
 
 ## Fix
 
-Bubble Trouble imports `aygshell.dll` ordinal 75 (`SHLoadImageFile`) for its external BMP/JPEG graphics. PocketHLE previously treated the ordinal as an unimplemented call and stopped before rendering. The fix registers the ordinal, resolves the guest path through the VFS, decodes the image, and returns a GDI bitmap in the emulator's RGB565 format.
+Bubble Trouble imports `aygshell.dll` ordinal 75 (`SHLoadImageFile`) for its external BMP/JPEG graphics. niobiumHLE previously treated the ordinal as an unimplemented call and stopped before rendering. The fix registers the ordinal, resolves the guest path through the VFS, decodes the image, and returns a GDI bitmap in the emulator's RGB565 format.
 
 ## Acceptance run
 
 ```text
 python3 tools/ai-tap-sequence.py /home/.z/chat-uploads/Bubble_Trouble_1.0b-60bed77e9a06.cab \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --cpu unicorn \
   --max-slices 3000000 \
   --instructions-per-slice 1000000 \
@@ -23,4 +23,4 @@ Result: **PASS**. The command exited with code 0, the emulator exited cleanly, a
 
 The full workspace test suite also passed: **365 passed, 10 ignored, 0 failed**. Audio warnings are expected on this headless Linux host because no default ALSA device is available.
 
-The screenshot is a PocketHLE emulator capture using the ARM Unicorn backend, not a screenshot from a physical Windows Mobile device; no native Windows Mobile device emulator was available in the Linux host environment.
+The screenshot is a niobiumHLE emulator capture using the ARM Unicorn backend, not a screenshot from a physical Windows Mobile device; no native Windows Mobile device emulator was available in the Linux host environment.

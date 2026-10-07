@@ -16,7 +16,7 @@
 //! `<library_root>` is platform-specific:
 //!
 //! * Linux/Windows: a path supplied by the desktop frontend, typically
-//!   the user's `Documents/PocketHLE` folder.
+//!   the user's `Documents/niobiumHLE` folder.
 //! * Android: `Context.getExternalFilesDir(null)` or any other path the
 //!   Java side hands across JNI.
 //!
@@ -541,7 +541,7 @@ impl Default for LauncherConfig {
     }
 }
 
-/// Top-level handle to an on-disk PocketHLE library.
+/// Top-level handle to an on-disk niobiumHLE library.
 ///
 /// Cheap to clone: the only state is the root path and the in-memory
 /// registry; mutations are written through to disk immediately.
@@ -563,26 +563,26 @@ struct LibraryFile {
 /// Resolve the default library root, in the order the desktop
 /// launcher has always used:
 ///
-/// 1. the `POCKETHLE_LIBRARY` environment variable,
-/// 2. `<documents>/PocketHLE` (e.g. `~/Documents/PocketHLE`),
-/// 3. `<data_dir>/PocketHLE/library` (XDG / `%APPDATA%`),
-/// 4. `./pockethle-library` as a last resort.
+/// 1. the `NIOBIUMHLE_LIBRARY` environment variable,
+/// 2. `<documents>/niobiumHLE` (e.g. `~/Documents/niobiumHLE`),
+/// 3. `<data_dir>/niobiumHLE/library` (XDG / `%APPDATA%`),
+/// 4. `./niobiumhle-library` as a last resort.
 ///
 /// Lives here rather than in a frontend so the CLI's `import` command
 /// and the GUI always agree on which library they are touching.
 pub fn default_library_root() -> PathBuf {
-    if let Some(p) = std::env::var_os("POCKETHLE_LIBRARY") {
+    if let Some(p) = std::env::var_os("NIOBIUMHLE_LIBRARY") {
         return PathBuf::from(p);
     }
     if let Some(dirs) = directories::UserDirs::new() {
         if let Some(docs) = dirs.document_dir() {
-            return docs.join("PocketHLE");
+            return docs.join("niobiumHLE");
         }
     }
-    if let Some(dirs) = directories::ProjectDirs::from("ai", "PocketHLE", "PocketHLE") {
+    if let Some(dirs) = directories::ProjectDirs::from("ai", "niobiumHLE", "niobiumHLE") {
         return dirs.data_dir().join("library");
     }
-    PathBuf::from("./pockethle-library")
+    PathBuf::from("./niobiumhle-library")
 }
 
 impl Library {
@@ -605,7 +605,7 @@ impl Library {
     }
 
     /// Upgrade game entries and global config persisted by older
-    /// versions of PocketHLE so they are usable under the current
+    /// versions of niobiumHLE so they are usable under the current
     /// defaults.
     ///
     /// * `cpu_backend = Stub` is bumped to `Unicorn`. Stub is
@@ -753,7 +753,7 @@ impl Library {
         // opens the long ones -- Asphalt 2 3D wants `light.bar` next to
         // `Asphalt2_SPV_C600.exe` -- so recreate them before picking an
         // entry point. Without this a title that runs fine through
-        // `pockethle run` fails to load its data from the library.
+        // `niobiumhle run` fails to load its data from the library.
         let long_names = pocket_cab::materialise_setup_names(&extracted_dir, &files);
         // Cabs predating `_setup.xml` keep the same mapping in their
         // binary `.000` header instead. Rayman Ultimate records all 198
@@ -1785,7 +1785,7 @@ fn materialise_legacy_install_files(
 /// into) is preferred over the declared `InstallDir` because the two
 /// frequently disagree: Gameloft's Sonic Unleashed declares
 /// `%CE1%\SONIC` but installs into `%CE1%\Gameloft\SONIC`, which is
-/// the path the game hard-codes. This mirrors how `pockethle run <cab>`
+/// the path the game hard-codes. This mirrors how `niobiumhle run <cab>`
 /// resolves the same cabinet, so a title behaves identically whether it
 /// is launched from a file or from the library.
 fn setup_save_dir(files: &[pocket_cab::CabFile]) -> Option<String> {
@@ -2070,7 +2070,7 @@ fn is_guest_dll(path: &Path) -> bool {
         .is_some_and(|pe| pe.is_supported_guest() && pe.is_dll())
 }
 
-/// The GL ES driver libraries PocketHLE answers itself — the same two
+/// The GL ES driver libraries niobiumHLE answers itself — the same two
 /// names `pocket_winceapi::gles` claims at the import boundary. The
 /// launcher only has to *recognise* a build that draws through a
 /// driver, not service its calls, so it keeps the names here rather
@@ -2093,7 +2093,7 @@ const EMULATED_GLES_DRIVERS: [&str; 2] = ["libgles_cm.dll", "libgles_cl.dll"];
 /// (`libGLES_CL.dll`) instead; a device with neither keeps the
 /// software-rendered `cod2.exe`.
 ///
-/// PocketHLE does not run install-time DLLs, so a plain import lands on
+/// niobiumHLE does not run install-time DLLs, so a plain import lands on
 /// the software build — the one case that never touches `pocket-gles`.
 /// The game then rasterises every pixel in emulated ARM code instead of
 /// calling a driver the emulator implements in native Rust, which on
@@ -2103,7 +2103,7 @@ const EMULATED_GLES_DRIVERS: [&str; 2] = ["libgles_cm.dll", "libgles_cl.dll"];
 ///
 /// Returns `None` when the shortcut target already draws through a
 /// driver, when the cabinet ships a single build, or when the siblings
-/// want a driver PocketHLE does not implement.
+/// want a driver niobiumHLE does not implement.
 pub fn accelerated_renderer_build(shortcut_target: &Path) -> Option<PathBuf> {
     let dir = shortcut_target.parent()?;
     let stem = shortcut_target.file_stem()?.to_str()?.to_ascii_lowercase();
@@ -2166,7 +2166,7 @@ pub fn accelerated_renderer_build(shortcut_target: &Path) -> Option<PathBuf> {
     Some(chosen)
 }
 
-/// The GL ES driver `path` imports, lower-cased, if it is one PocketHLE
+/// The GL ES driver `path` imports, lower-cased, if it is one niobiumHLE
 /// implements.
 fn imported_gles_driver(path: &Path) -> Option<String> {
     let image = pocket_pe::load_file(path).ok()?;
@@ -2282,7 +2282,7 @@ mod tests {
         let unique = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut p = std::env::temp_dir();
         p.push(format!(
-            "pockethle-library-test-{}-{}-{}",
+            "niobiumhle-library-test-{}-{}-{}",
             name,
             now_unix_seconds(),
             unique
@@ -2743,7 +2743,7 @@ mod tests {
     }
 
     /// A cabinet that ships one build per 3D chip leaves the pick to its
-    /// setup DLL, which PocketHLE never runs — so the shortcut target is
+    /// setup DLL, which niobiumHLE never runs — so the shortcut target is
     /// the software build, and running it means rasterising in emulated
     /// ARM code instead of through the emulator's own GL ES.
     #[test]
@@ -2759,7 +2759,7 @@ mod tests {
     /// Two accelerated builds, one bundled driver: the cabinet carries
     /// `libGLES_CM.dll` for the GoForce build, while the Intel 2700G
     /// build binds to a `libGLES_CL.dll` that only that device's ROM
-    /// has. Both work under PocketHLE, so the bundled pairing decides
+    /// has. Both work under niobiumHLE, so the bundled pairing decides
     /// and the choice stays deterministic.
     #[test]
     fn the_driver_the_cabinet_ships_decides_between_two_hardware_builds() {

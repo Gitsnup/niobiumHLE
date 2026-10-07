@@ -2,7 +2,7 @@
 //!
 //! Implements just enough of the `.rsrc` directory format to flatten
 //! it into a list of `(type, id_or_name) → (data_rva, size)` entries.
-//! That is all PocketHLE needs for `FindResourceW`/`LoadResource`/
+//! That is all niobiumHLE needs for `FindResourceW`/`LoadResource`/
 //! `LockResource` to return real bytes from the loaded image.
 //!
 //! Reference: <https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#the-rsrc-section>

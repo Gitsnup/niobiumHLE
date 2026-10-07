@@ -2,7 +2,7 @@
 
 ## Fixes
 
-The CAB's CE install header puts the executable in `bin/`, resources in `resources/`, and the manual in `manual/`. PocketHLE previously flattened that tree, missed sibling resource paths containing `..`, and didn't expand nested ZIPs in their installed directories. The game also relies on accurate class registration results, live GDI queries and text, a Windows CE display DC, and the correct button-release message state.
+The CAB's CE install header puts the executable in `bin/`, resources in `resources/`, and the manual in `manual/`. niobiumHLE previously flattened that tree, missed sibling resource paths containing `..`, and didn't expand nested ZIPs in their installed directories. The game also relies on accurate class registration results, live GDI queries and text, a Windows CE display DC, and the correct button-release message state.
 
 ## Verification
 

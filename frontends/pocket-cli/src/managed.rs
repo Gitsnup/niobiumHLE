@@ -61,7 +61,7 @@ pub fn run(
 
     let runtime = runtime
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("POCKETHLE_MANAGED_RUNTIME").map(PathBuf::from))
+        .or_else(|| std::env::var_os("NIOBIUMHLE_MANAGED_RUNTIME").map(PathBuf::from))
         .unwrap_or_else(|| PathBuf::from("mono"));
     let mut command = Command::new(&runtime);
     command.arg(exe).stdin(Stdio::null());

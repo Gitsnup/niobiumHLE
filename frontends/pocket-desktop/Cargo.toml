@@ -5,10 +5,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Cross-platform desktop launcher GUI for PocketHLE (Linux + Windows)."
+description = "Cross-platform desktop launcher GUI for niobiumHLE (Linux + Windows)."
 
 [[bin]]
-name = "pockethle-gui"
+name = "niobiumhle-gui"
 path = "src/main.rs"
 
 [features]

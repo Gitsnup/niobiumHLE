@@ -8,7 +8,7 @@ The fix registers `GXSetViewport` in `gx.dll`, returns success, and records the 
 
 - `cargo build --release -p pocket-cli --features unicorn` — passed.
 - `cargo test --workspace` — passed.
-- Fixed run: `pockethle run TheQuestPpc103-99e72fe44d3f.cab --cpu unicorn --max-slices 12000000 --instructions-per-slice 1000000 --message-budget 0 --dump-frames-to ... --max-frames 20` — exit 0, clean emulator exit, `frame_counter=21`, 20 distinct captured frames.
+- Fixed run: `niobiumhle run TheQuestPpc103-99e72fe44d3f.cab --cpu unicorn --max-slices 12000000 --instructions-per-slice 1000000 --message-budget 0 --dump-frames-to ... --max-frames 20` — exit 0, clean emulator exit, `frame_counter=21`, 20 distinct captured frames.
 - Required tap tool: `python3 tools/ai-tap-sequence.py TheQuestPpc103-99e72fe44d3f.cab --message-budget 0 --max-slices 3000000 --max-frames 12 --tap 80,100 --tap 160,100 --dump-frames-to ...` — exit 0, 2 captured frames, no emulator crash.
 - Captured frame diversity: the longer run produced 20 unique PPM snapshots; `gameplay.ppm` contains non-black rendered artwork.
 

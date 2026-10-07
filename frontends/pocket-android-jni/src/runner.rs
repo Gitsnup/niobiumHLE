@@ -9,7 +9,7 @@
 //! returned. With the trace-only stub backend that returned in a
 //! few milliseconds and the user just saw a static screenshot. With
 //! the real Unicorn backend wired up in
-//! [PR #11](https://github.com/j92580498-max/PocketHLE/pull/11) the
+//! [PR #11](https://github.com/j92580498-max/niobiumHLE/pull/11) the
 //! emulator now actually executes ARM code and reaches the menu, so
 //! `runGame` would happily churn through 1024 dispatch slices ×
 //! 1 000 000 instructions/slice on the phone CPU before returning —
@@ -265,7 +265,7 @@ pub fn start(library_root: PathBuf, game_id: String) -> anyhow::Result<Session> 
 
     let state_for_worker = Arc::clone(&state);
     let worker = std::thread::Builder::new()
-        .name(format!("pockethle-emu-{game_id}"))
+        .name(format!("niobiumhle-emu-{game_id}"))
         .spawn(move || {
             let summary =
                 run_game_to_completion(&library_root, &entry, &state_for_worker, input_rx);
@@ -276,7 +276,7 @@ pub fn start(library_root: PathBuf, game_id: String) -> anyhow::Result<Session> 
                 *running = false;
             }
         })
-        .context("spawn pockethle worker thread")?;
+        .context("spawn niobiumhle worker thread")?;
 
     Ok(Session {
         state,

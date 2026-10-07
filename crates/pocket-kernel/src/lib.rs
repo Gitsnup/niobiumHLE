@@ -2,7 +2,7 @@
 //! Kernel-side scaffolding: virtual address space, thunk allocator,
 //! thread state, scheduling.
 //!
-//! In PocketHLE every emulated process owns a single 32-bit address
+//! In niobiumHLE every emulated process owns a single 32-bit address
 //! space. The kernel is responsible for:
 //!
 //! * Mapping the loaded PE image into the CPU.
@@ -258,7 +258,7 @@ const DIRECT_PRESENT_TRUST: Duration = Duration::from_millis(500);
 /// adjacent [`THUNK_STRIDE`]-spaced slots into one ranged hook.
 ///
 /// Unicorn walks its whole code-hook list on each `emu_start`, and
-/// PocketHLE re-enters the guest once per emulated WinCE API call, so
+/// niobiumHLE re-enters the guest once per emulated WinCE API call, so
 /// that walk is on the hottest path there is. A software-rendered game
 /// such as Zuma makes ~8 500 API calls per displayed frame; with one
 /// hook per thunk slot — ~200 imports plus ~4 970 `GetProcAddress`-able
@@ -565,7 +565,7 @@ impl StatusBar {
     ///
     /// Note the reference has 45 px of chrome below the board, but the
     /// remaining 26 px are the shell's "New Tools" command bar, a
-    /// separate window PocketHLE doesn't draw at all.
+    /// separate window niobiumHLE doesn't draw at all.
     pub const DEFAULT_HEIGHT: i32 = 19;
 
     /// Face colour — the classic `COLOR_BTNFACE` light grey.
@@ -716,7 +716,7 @@ pub enum DispatchOutcome {
     ReturnedR0R1(u32, u32),
     /// The host wants the emulator to stop entirely (graceful exit).
     Halt,
-    /// The host has not implemented this API. PocketHLE will log a
+    /// The host has not implemented this API. niobiumHLE will log a
     /// loud warning and synthesize a `0` return.
     Unimplemented,
     /// Reroute control flow into the guest at `pc`, leaving LR/SP and
@@ -774,7 +774,7 @@ impl Dispatcher for NullDispatcher {
 
 /// A DLL the guest pulled in at runtime with `LoadLibraryW`.
 ///
-/// PocketHLE does not *execute* satellite modules: nothing resolves
+/// niobiumHLE does not *execute* satellite modules: nothing resolves
 /// their exports (a resource-only DLL has none, and the titles that
 /// load one import no `GetProcAddress`), so we skip base relocations
 /// and the IAT entirely and only make the image's bytes readable so
@@ -996,7 +996,7 @@ pub struct KernelState {
     pub message_frame: Option<GuestCallFrame>,
     /// Bottom status bar created via commctrl's `CreateStatusWindowW`.
     ///
-    /// Pocket PC apps get a real shell-drawn bar here; PocketHLE has no
+    /// Pocket PC apps get a real shell-drawn bar here; niobiumHLE has no
     /// shell, so we keep the text the guest pushes at it via
     /// `SB_SETTEXT` and paint it ourselves at the bottom of the screen.
     /// `None` until the guest actually asks for a status window.
@@ -1098,7 +1098,7 @@ pub struct KernelState {
     /// constructor / destructor iterators (`??_L` / `??_M`).
     ///
     /// The MSVC ARM CE CRT implements `??_L` as a host-callable
-    /// `for (i=0..N) pCtor(p+i*size);` loop. PocketHLE has no way
+    /// `for (i=0..N) pCtor(p+i*size);` loop. niobiumHLE has no way
     /// to call back into guest code N times from a single Rust
     /// dispatch, so we instead drive the loop one element per
     /// `JumpTo` round-trip: the handler stashes the iteration state
@@ -1750,7 +1750,7 @@ impl Process {
                 | pocket_pe::machine::MIPS_R4000
         ) {
             return Err(KernelError::Loader(format!(
-                "unsupported executable machine 0x{:04x}; PocketHLE's CPU backend executes ARM and MIPS WinCE images only",
+                "unsupported executable machine 0x{:04x}; niobiumHLE's CPU backend executes ARM and MIPS WinCE images only",
                 image.machine
             )));
         }
@@ -2347,13 +2347,13 @@ pub fn run_main_loop_with_hook(
     mut frame_hook: Option<&mut dyn FrameHook>,
 ) -> Result<(), KernelError> {
     let detected_thumb_mode = image_uses_thumb_entry(cpu, &process.image)?;
-    let override_mode = std::env::var("POCKETHLE_ENTRY_MODE").ok();
+    let override_mode = std::env::var("NIOBIUMHLE_ENTRY_MODE").ok();
     let thumb_mode = match override_mode.as_deref() {
         Some("arm") => false,
         Some("thumb") => true,
         Some(other) => {
             return Err(KernelError::Loader(format!(
-                "invalid POCKETHLE_ENTRY_MODE={other:?}; expected arm or thumb"
+                "invalid NIOBIUMHLE_ENTRY_MODE={other:?}; expected arm or thumb"
             )))
         }
         None => detected_thumb_mode,
@@ -2362,20 +2362,20 @@ pub fn run_main_loop_with_hook(
         && thumb_mode != detected_thumb_mode
     {
         log::info!(
-            "POCKETHLE_ENTRY_MODE selected {} instead of automatic {} detection",
+            "NIOBIUMHLE_ENTRY_MODE selected {} instead of automatic {} detection",
             if thumb_mode { "Thumb" } else { "ARM" },
             if detected_thumb_mode { "Thumb" } else { "ARM" }
         );
     }
-    let mut pc = match std::env::var("POCKETHLE_OVERRIDE_ENTRY") {
+    let mut pc = match std::env::var("NIOBIUMHLE_OVERRIDE_ENTRY") {
         Ok(v) => {
             let parsed = if let Some(stripped) = v.strip_prefix("0x") {
                 u32::from_str_radix(stripped, 16)
             } else {
                 v.parse::<u32>()
             }
-            .map_err(|_| KernelError::Loader("invalid POCKETHLE_OVERRIDE_ENTRY".into()))?;
-            log::info!("POCKETHLE_OVERRIDE_ENTRY=0x{parsed:08x}");
+            .map_err(|_| KernelError::Loader("invalid NIOBIUMHLE_OVERRIDE_ENTRY".into()))?;
+            log::info!("NIOBIUMHLE_OVERRIDE_ENTRY=0x{parsed:08x}");
             parsed
         }
         Err(_) => {

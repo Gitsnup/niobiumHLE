@@ -10,7 +10,7 @@ The supplied `RushHour_WM5_CAB_4.4-spaces.im-119680055b1e.cab` is not a native A
 - entry import: `mscoree.dll!_CorExeMain`;
 - installer target: `\\Program Files\\RushHour_WM5.CAB\\Rushhour_WM5.exe`.
 
-PocketHLE's native execution backend supports ARM/MIPS WinCE images, while this payload is x86 managed code. The CLI now provides an explicit `--managed-runtime` fallback: it launches the managed image through a compatible host runtime, preserves the CAB extraction and install directory, supports synthetic taps/keys, and captures the application window. This makes the supplied game usable without pretending that x86 CLR bytecode is native ARM code.
+niobiumHLE's native execution backend supports ARM/MIPS WinCE images, while this payload is x86 managed code. The CLI now provides an explicit `--managed-runtime` fallback: it launches the managed image through a compatible host runtime, preserves the CAB extraction and install directory, supports synthetic taps/keys, and captures the application window. This makes the supplied game usable without pretending that x86 CLR bytecode is native ARM code.
 
 ## Root cause
 
@@ -26,7 +26,7 @@ CAB extraction → PE/CLR detection → Process::map_into → managed-image guar
 managed PE requires a .NET Compact Framework runtime (v2.0.50727)
 ```
 
-The executable has no native game loop for PocketHLE to enter. Its managed entry point calls `Application.Run`, constructs a `Form`, and paints the board in `Form1_Paint` using `System.Drawing.Graphics`. The new managed fallback executes that real entry point instead of fabricating `WM_PAINT` or incrementing `frame_counter`.
+The executable has no native game loop for niobiumHLE to enter. Its managed entry point calls `Application.Run`, constructs a `Form`, and paints the board in `Form1_Paint` using `System.Drawing.Graphics`. The new managed fallback executes that real entry point instead of fabricating `WM_PAINT` or incrementing `frame_counter`.
 
 ## Verification
 
@@ -43,7 +43,7 @@ The required helper was run against the supplied CAB:
 ```text
 python3 tools/ai-tap-sequence.py \
   /home/.z/chat-uploads/RushHour_WM5_CAB_4.4-spaces.im-119680055b1e.cab \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --cpu unicorn \
   --message-budget 0 \
   --max-slices 100000 \
@@ -62,11 +62,11 @@ The managed fallback was started with a .NET-compatible host runtime and a virtu
 - `pe-info.log` — x86 machine, CLR metadata, and `mscoree.dll!_CorExeMain` import.
 - `mono-runtime.log` — host-runtime probe result.
 - `managed-run.log` — managed fallback launch and capture result.
-- `ai-tap-sequence.log` — required PocketHLE helper output.
+- `ai-tap-sequence.log` — required niobiumHLE helper output.
 - `gameplay-host.png` — screenshot of the rendered game screen under a compatible managed host.
 
 ## Scope decision
 
-The native PocketHLE backend still does not emulate x86 CLR code. For this Windows Mobile managed title, the supported solution is the explicit host-runtime path; it provides real rendering and input while keeping native emulation behavior unchanged for ARM/MIPS titles. A compatible runtime is required on the host; PocketHLE does not bundle Microsoft or Mono runtime binaries.
+The native niobiumHLE backend still does not emulate x86 CLR code. For this Windows Mobile managed title, the supported solution is the explicit host-runtime path; it provides real rendering and input while keeping native emulation behavior unchanged for ARM/MIPS titles. A compatible runtime is required on the host; niobiumHLE does not bundle Microsoft or Mono runtime binaries.
 
 ![RushHour gameplay under a compatible managed host](gameplay-host.png)

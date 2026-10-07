@@ -1,6 +1,6 @@
 # Asphalt 2 3D audio verification
 
-This proof was generated from the supplied Motorola Q9 CAB with the PocketHLE CLI after the audio mixer/backend changes.
+This proof was generated from the supplied Motorola Q9 CAB with the niobiumHLE CLI after the audio mixer/backend changes.
 
 Command profile: `--cpu unicorn --screen 320x240 --dump-audio-to ... --dump-frames-to ... --max-frames 900 --message-budget 100000`.
 

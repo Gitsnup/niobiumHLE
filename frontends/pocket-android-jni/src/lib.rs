@@ -1,9 +1,9 @@
-//! JNI bridge between the PocketHLE core/library and the Android
+//! JNI bridge between the niobiumHLE core/library and the Android
 //! frontend. The Java side talks to this crate exclusively through
 //! UTF-8 JSON strings — that keeps the FFI surface small and removes
 //! any need for shared Kotlin/Rust data classes.
 //!
-//! Exposed methods (all on `com.pockethle.app.NativeBridge`):
+//! Exposed methods (all on `com.niobiumhle.app.NativeBridge`):
 //!
 //! * `banner()` — sanity string showing the loaded version.
 //! * `listGames(libraryRoot)` — JSON array of [`pocket_library::GameEntry`].
@@ -43,29 +43,29 @@ use serde::Serialize;
 use crate::runner::{InputCommand, Session};
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_banner<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_banner<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
 ) -> jstring {
     init_logger();
-    let banner = format!("PocketHLE v{} (Android)", env!("CARGO_PKG_VERSION"));
+    let banner = format!("niobiumHLE v{} (Android)", env!("CARGO_PKG_VERSION"));
     new_jstring(&env, banner)
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_MainActivity_banner<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_MainActivity_banner<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
 ) -> jstring {
     init_logger();
     new_jstring(
         &env,
-        format!("PocketHLE v{} (Android)", env!("CARGO_PKG_VERSION")),
+        format!("niobiumHLE v{} (Android)", env!("CARGO_PKG_VERSION")),
     )
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_listGames<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_listGames<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -87,7 +87,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_listGames<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_importCab<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_importCab<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -114,7 +114,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importCab<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_importZip<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_importZip<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -141,7 +141,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importZip<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_importRar<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_importRar<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -168,7 +168,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importRar<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_importXap<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_importXap<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -195,7 +195,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importXap<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_importExe<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_importExe<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -222,7 +222,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_importExe<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_removeGame<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_removeGame<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -249,7 +249,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_removeGame<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_readConfig<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_readConfig<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -270,7 +270,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_readConfig<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_writeConfig<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_writeConfig<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -299,7 +299,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_writeConfig<'local>(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_readGameSettings<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_readGameSettings<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -328,7 +328,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_readGameSettings<'loc
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_writeGameSettings<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_writeGameSettings<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -361,7 +361,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_writeGameSettings<'lo
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_runGame<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_runGame<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -563,7 +563,7 @@ fn init_logger() {
         android_logger::init_once(
             android_logger::Config::default()
                 .with_max_level(log::LevelFilter::Info)
-                .with_tag("PocketHLE"),
+                .with_tag("niobiumHLE"),
         );
     });
 }
@@ -605,7 +605,7 @@ const INPUT_KIND_POINTER_MOVE: jint = 4;
 const INPUT_KIND_MENU_COMMAND: jint = 5;
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeStartGame<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeStartGame<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     library_root: JString<'local>,
@@ -636,7 +636,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeStartGame<'loca
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollFrame<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativePollFrame<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -680,7 +680,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollFrame<'loca
 /// opened its `waveOut` device yet. Kotlin needs this to size its
 /// `AudioTrack` before it starts pulling samples.
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeAudioFormat<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeAudioFormat<'local>(
     _env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -695,7 +695,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeAudioFormat<'lo
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollAudio<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativePollAudio<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -723,7 +723,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollAudio<'loca
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeIsRunning<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeIsRunning<'local>(
     _env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -735,7 +735,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeIsRunning<'loca
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeSendInput<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeSendInput<'local>(
     _env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -775,7 +775,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeSendInput<'loca
 /// `{"id":..,"label":..}` objects. Empty for native guests: their
 /// menu bars are guest-drawn and the host never learns the labels.
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollMenu<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativePollMenu<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -788,7 +788,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativePollMenu<'local
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeRequestStop<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeRequestStop<'local>(
     _env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,
@@ -799,7 +799,7 @@ pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeRequestStop<'lo
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_pockethle_app_NativeBridge_nativeFinishGame<'local>(
+pub extern "system" fn Java_com_niobiumhle_app_NativeBridge_nativeFinishGame<'local>(
     env: JNIEnv<'local>,
     _class: JClass<'local>,
     handle: jlong,

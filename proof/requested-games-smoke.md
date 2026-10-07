@@ -1,6 +1,6 @@
 # Requested CAB support smoke matrix
 
-The eight uploaded CABs were inspected and run through the same `pockethle run` archive path. The launcher now restores the executable and long asset names from `_setup.xml`, prefers the install shortcut over helper binaries, mounts the recorded install directory, and carries the selected screen geometry into desktop and Android sessions.
+The eight uploaded CABs were inspected and run through the same `niobiumhle run` archive path. The launcher now restores the executable and long asset names from `_setup.xml`, prefers the install shortcut over helper binaries, mounts the recorded install directory, and carries the selected screen geometry into desktop and Android sessions.
 
 | CAB | Selected executable | Result observed |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 ## Root cause
 
-The CAB is a native ARM Windows Mobile / Windows CE application. The baseline did not fail in the framebuffer loop: it crashed during C++ runtime initialization before the first draw. The game's `??_L` constructor callback created a Windows Media Player COM object with `CoCreateInstance`, but PocketHLE returned `E_NOTIMPL` and left the output interface pointer null. The next virtual call dereferenced address `0x00000000`, so `frame_counter` stayed at `0`.
+The CAB is a native ARM Windows Mobile / Windows CE application. The baseline did not fail in the framebuffer loop: it crashed during C++ runtime initialization before the first draw. The game's `??_L` constructor callback created a Windows Media Player COM object with `CoCreateInstance`, but niobiumHLE returned `E_NOTIMPL` and left the output interface pointer null. The next virtual call dereferenced address `0x00000000`, so `frame_counter` stayed at `0`.
 
 ## Fix
 
@@ -39,7 +39,7 @@ Fixed run through `tools/ai-tap-sequence.py`:
 ```text
 python3 tools/ai-tap-sequence.py \
   /home/.z/chat-uploads/BigRangeHunting3-f0babecab5be.cab \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --cpu unicorn \
   --max-slices 20000000 \
   --instructions-per-slice 1000000 \

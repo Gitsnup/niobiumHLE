@@ -1462,7 +1462,7 @@ impl Context {
 }
 
 /// Write a freshly uploaded texture out as a PPM plus a companion
-/// greyscale PPM of its alpha, when `POCKETHLE_DUMP_TEXTURES` names a
+/// greyscale PPM of its alpha, when `NIOBIUMHLE_DUMP_TEXTURES` names a
 /// directory.
 ///
 /// Decoding a compressed format wrong shows up on screen as art that is
@@ -1471,7 +1471,7 @@ impl Context {
 /// atlas on its own is the only reliable way to tell a bad decoder from
 /// bad texture coordinates.
 fn dump_texture(name: u32, tex: &Texture) {
-    let Ok(dir) = std::env::var("POCKETHLE_DUMP_TEXTURES") else {
+    let Ok(dir) = std::env::var("NIOBIUMHLE_DUMP_TEXTURES") else {
         return;
     };
     if !tex.is_complete() {
@@ -1496,7 +1496,7 @@ fn dump_texture(name: u32, tex: &Texture) {
 /// texture, so a suspect decode can be re-derived offline from the exact
 /// bytes the game supplied.
 fn dump_compressed(name: u32, width: u32, height: u32, format: u32, data: &[u8]) {
-    let Ok(dir) = std::env::var("POCKETHLE_DUMP_TEXTURES") else {
+    let Ok(dir) = std::env::var("NIOBIUMHLE_DUMP_TEXTURES") else {
         return;
     };
     let _ = std::fs::create_dir_all(&dir);

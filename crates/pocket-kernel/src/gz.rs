@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn gz_round_trips_read_and_seek() {
         let plain = b"RAYMAN PCMAP DATA 0123456789".to_vec();
-        let dir = std::env::temp_dir().join(format!("pockethle-gz-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("niobiumhle-gz-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("allfix.dat.gz");
         std::fs::write(&path, gzip_of(&plain)).unwrap();

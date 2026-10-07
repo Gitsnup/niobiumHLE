@@ -1,5 +1,5 @@
 #![allow(clippy::chunks_exact_to_as_chunks)]
-//! Linux command-line frontend for PocketHLE.
+//! Linux command-line frontend for niobiumHLE.
 
 use std::path::PathBuf;
 
@@ -14,7 +14,7 @@ mod xvfb;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "pockethle",
+    name = "niobiumhle",
     version,
     about = "High-level Windows Mobile / Pocket PC emulator (CLI frontend)",
     long_about = None
@@ -38,7 +38,7 @@ enum Command {
     InspectCab {
         cab: PathBuf,
         /// Optional output directory (defaults to a temp dir under
-        /// `$XDG_CACHE_HOME/pockethle`).
+        /// `$XDG_CACHE_HOME/niobiumhle`).
         #[arg(short, long)]
         out_dir: Option<PathBuf>,
     },
@@ -50,8 +50,8 @@ enum Command {
     Import {
         /// Archive or executable to import.
         path: PathBuf,
-        /// Library root. Defaults to `POCKETHLE_LIBRARY`, else
-        /// `<documents>/PocketHLE`.
+        /// Library root. Defaults to `NIOBIUMHLE_LIBRARY`, else
+        /// `<documents>/niobiumHLE`.
         #[arg(long)]
         library: Option<PathBuf>,
     },
@@ -86,7 +86,7 @@ enum Command {
         /// slices to finish their CRT init, build their soft-float
         /// lookup tables and load bitmap resources before the first
         /// `WM_PAINT` is delivered, so the default is high enough
-        /// that `pockethle run game.cab` produces visible output
+        /// that `niobiumhle run game.cab` produces visible output
         /// out of the box. Pass a smaller value for fast smoke
         /// tests, or `0` for no upper bound.
         #[arg(long, default_value_t = 50_000_000)]
@@ -177,7 +177,7 @@ enum Command {
         #[arg(long, value_name = "ADDR=HEX")]
         patch: Vec<String>,
         /// Add an instruction-level breakpoint at the given guest VA.
-        /// When the CPU reaches it, PocketHLE dumps the full register
+        /// When the CPU reaches it, niobiumHLE dumps the full register
         /// state and halts. Used to diagnose where unexpected control
         /// flow comes from. May be passed multiple times.
         #[arg(long, value_name = "VA")]
@@ -226,7 +226,7 @@ enum CpuBackend {
 
 /// CPU backend used when `--cpu` is not specified. We pick `unicorn`
 /// when the binary is compiled with that feature so that the default
-/// `pockethle run …` invocation actually runs guest ARM code; the
+/// `niobiumhle run …` invocation actually runs guest ARM code; the
 /// user can still pass `--cpu stub` for trace-only analysis.
 #[cfg(feature = "unicorn")]
 const DEFAULT_CPU_BACKEND: &str = "unicorn";
@@ -377,7 +377,7 @@ fn cmd_inspect_cab(cab: &std::path::Path, out_dir: Option<&std::path::Path>) -> 
                     let home = std::env::var_os("HOME").unwrap_or_default();
                     PathBuf::from(home).join(".cache")
                 });
-            base.join("pockethle").join("cab-extracted")
+            base.join("niobiumhle").join("cab-extracted")
         }
     };
     std::fs::create_dir_all(&dest)?;
@@ -881,7 +881,7 @@ fn cmd_run(
         #[cfg(not(feature = "display"))]
         {
             anyhow::bail!(
-                "--display requires building pockethle with `--features display` (minifb)."
+                "--display requires building niobiumhle with `--features display` (minifb)."
             );
         }
     }
@@ -897,7 +897,7 @@ fn cmd_run(
 
     if let Some(p) = emu.process() {
         let ppm = p.state.framebuffer.snapshot_ppm();
-        let final_path = std::path::PathBuf::from("/tmp/pockethle-final.ppm");
+        let final_path = std::path::PathBuf::from("/tmp/niobiumhle-final.ppm");
         if let Err(e) = std::fs::write(&final_path, &ppm) {
             eprintln!("warn: could not write {} ({e})", final_path.display());
         } else {
@@ -1436,7 +1436,7 @@ mod display_window {
             let w = width as usize;
             let h = height as usize;
             let window = Window::new(
-                "PocketHLE",
+                "niobiumHLE",
                 w,
                 h,
                 WindowOptions {

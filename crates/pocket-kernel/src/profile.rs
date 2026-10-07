@@ -1,4 +1,4 @@
-//! Run-loop profiler, off unless `POCKETHLE_PROFILE` is set.
+//! Run-loop profiler, off unless `NIOBIUMHLE_PROFILE` is set.
 //!
 //! A software-rendered Pocket PC title spends its frame in three very
 //! different places — inside the emulated CPU, inside our API
@@ -10,7 +10,7 @@
 //! attribute time to a *guest* API anyway, so the run loop measures
 //! itself.
 //!
-//! Enable with `POCKETHLE_PROFILE=1`; the summary goes to stderr when
+//! Enable with `NIOBIUMHLE_PROFILE=1`; the summary goes to stderr when
 //! the run ends. When the variable is absent every method below is a
 //! branch on a cached `bool`.
 
@@ -63,9 +63,9 @@ pub struct Profiler {
 }
 
 impl Profiler {
-    /// A profiler that measures only when `POCKETHLE_PROFILE` is set.
+    /// A profiler that measures only when `NIOBIUMHLE_PROFILE` is set.
     pub fn from_env() -> Self {
-        let on = std::env::var_os("POCKETHLE_PROFILE").is_some_and(|v| v != "0");
+        let on = std::env::var_os("NIOBIUMHLE_PROFILE").is_some_and(|v| v != "0");
         Self {
             on,
             start: Instant::now(),
@@ -264,7 +264,7 @@ impl Profiler {
             + self.controls.total
             + self.hook.total
             + self.tick.total;
-        eprintln!("\n=== PocketHLE profile ===");
+        eprintln!("\n=== niobiumHLE profile ===");
         eprintln!(
             "wall {:.3}s  slices {}  frames {}  {:.1} fps  {:.0} slices/frame",
             secs,

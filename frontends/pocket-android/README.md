@@ -1,4 +1,4 @@
-# PocketHLE — Android frontend
+# niobiumHLE — Android frontend
 
 The Android launcher imports Pocket PC `.cab` installers, standalone ARM
 `.exe` files, ZIP packages, RAR packages, and Windows self-extracting installers that contain
@@ -20,7 +20,7 @@ cargo ndk -t arm64-v8a -t armeabi-v7a -o frontends/pocket-android/app/src/main/j
     build --release -p pocket-android-jni
 ```
 
-This drops `libpockethle_jni.so` under
+This drops `libniobiumhle_jni.so` under
 `frontends/pocket-android/app/src/main/jniLibs/<abi>/`.
 
 > **CPU backend on Android.** The Android crate currently builds with

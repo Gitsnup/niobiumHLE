@@ -8,7 +8,7 @@ loop. It needed four fixes, all in
 ## Run
 
 ```sh
-./target/release/pockethle run /tmp/tg-install/toygolf_qvga.exe \
+./target/release/niobiumhle run /tmp/tg-install/toygolf_qvga.exe \
   --rom-dir /tmp/tg-install --rom-prefix '\Program Files\Game\' \
   --module-path '\Program Files\Game\toygolf_qvga.exe' \
   --screen 320x240 --message-budget 0 \

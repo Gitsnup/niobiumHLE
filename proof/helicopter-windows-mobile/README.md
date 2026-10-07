@@ -4,7 +4,7 @@ The supplied `helicopter-1-a5ee71ae51d4.cab` is a legacy ARM Windows Mobile game
 
 ## Root cause
 
-The game calls `SHLoadDIBitmap` three times during startup for `heli.bmp`, `explosion.bmp`, and `font.bmp`. PocketHLE had no handler for this Windows CE API, so each call returned zero. The game then dereferenced the missing bitmap data and crashed at `0x00000000` before `GXEndDraw`; consequently `frame_counter` remained `0` and the display stayed blank.
+The game calls `SHLoadDIBitmap` three times during startup for `heli.bmp`, `explosion.bmp`, and `font.bmp`. niobiumHLE had no handler for this Windows CE API, so each call returned zero. The game then dereferenced the missing bitmap data and crashed at `0x00000000` before `GXEndDraw`; consequently `frame_counter` remained `0` and the display stayed blank.
 
 ## Fix
 

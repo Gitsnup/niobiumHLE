@@ -6,7 +6,7 @@
 //! tracks focus, and turns stylus taps into `WM_COMMAND` notifications
 //! for the parent — the application never draws a button itself.
 //!
-//! PocketHLE had no such procedure, so every child collapsed onto the
+//! niobiumHLE had no such procedure, so every child collapsed onto the
 //! application's own `HWND` and `WndProc`. That was not merely a
 //! cosmetic gap: because the child reused the parent's handle it also
 //! re-entered the parent's `WM_CREATE`, which creates the children, so

@@ -1,7 +1,7 @@
 # RandomNumGen v1.2 (Windows Mobile) proof
 
 The supplied `randomnumgenwm_v1.2-ce2babfb50e7.cab` (tectrasystems.org
-Random Number Generator) was run through PocketHLE's managed-runtime path.
+Random Number Generator) was run through niobiumHLE's managed-runtime path.
 
 ## Result
 
@@ -24,7 +24,7 @@ Random Number Generator) was run through PocketHLE's managed-runtime path.
    .NET Compact Framework assemblies carry — reports as .NET Compact
    Framework with the two-component product version. Anything else is
    shown raw. Pinned by `clr_version_strings_name_their_platform`.
-2. The kernel loader error for managed images no longer claims PocketHLE
+2. The kernel loader error for managed images no longer claims niobiumHLE
    "executes native ARM/MIPS WinCE images only"; it names the detected
    platform and points at the frontend managed-runtime path.
 3. `pocket-cli`'s managed window detector now prefers a window owned by

@@ -5,10 +5,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "JNI bridge that exposes the PocketHLE core to the Android frontend."
+description = "JNI bridge that exposes the niobiumHLE core to the Android frontend."
 
 [lib]
-name = "pockethle_jni"
+name = "niobiumhle_jni"
 crate-type = ["cdylib", "rlib"]
 
 [features]

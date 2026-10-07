@@ -2,17 +2,17 @@
 
 ## Diagnosis
 
-The supplied RAR contains `QVGA/Cops_RobbersQVga.cab`, which installs the ARM Thumb build `copsrobbers.exe`. With PocketHLE's legacy CLI budget of 240 synthetic window messages, the game renders its sound-choice prompt and then exits cleanly with `WM_QUIT` before reaching its menu: the baseline ends at `frame_counter=1`, with guest exit code `0x42`. This is not a DirectDraw/GAPI presentation failure—the first frame is visible. Windows CE's `GetMessage` contract returns zero for `WM_QUIT`, and its documentation says the normal message loop exits in response.
+The supplied RAR contains `QVGA/Cops_RobbersQVga.cab`, which installs the ARM Thumb build `copsrobbers.exe`. With niobiumHLE's legacy CLI budget of 240 synthetic window messages, the game renders its sound-choice prompt and then exits cleanly with `WM_QUIT` before reaching its menu: the baseline ends at `frame_counter=1`, with guest exit code `0x42`. This is not a DirectDraw/GAPI presentation failure—the first frame is visible. Windows CE's `GetMessage` contract returns zero for `WM_QUIT`, and its documentation says the normal message loop exits in response.
 
 The GLU startup and menu flow need more than 240 messages. The CLI now selects an unlimited message budget by default when the Cops & Robbers archive/module path is detected. Explicit `--message-budget` values still override this, and all other games retain the bounded 240-message default. The tap helper no longer forces `240` when the option is omitted. Its frame-scheduled inputs also stay queued for later screens instead of consuming a far-future menu action on the static sound prompt.
 
 ## Acceptance run
 
-The included CAB was run with PocketHLE's ARM Unicorn backend using `tools/ai-tap-sequence.py`. The initial tap accepts the sound prompt; the later Enter events advance through the title flow and start the level. `--message-budget` is intentionally omitted so the game-specific default is exercised.
+The included CAB was run with niobiumHLE's ARM Unicorn backend using `tools/ai-tap-sequence.py`. The initial tap accepts the sound prompt; the later Enter events advance through the title flow and start the level. `--message-budget` is intentionally omitted so the game-specific default is exercised.
 
 ```text
 python3 tools/ai-tap-sequence.py /path/to/Cops_RobbersQVga.cab \
-  --pockethle target/release/pockethle \
+  --niobiumhle target/release/niobiumhle \
   --cpu unicorn \
   --max-slices 12000000 \
   --instructions-per-slice 1000000 \
@@ -41,7 +41,7 @@ The capped reproduction was also run with explicit `--message-budget 240`: it ex
 
 Detailed outcomes: [test results](logs/test-results.md).
 
-The host has no ALSA output device, so PocketHLE runs silently and logs the expected audio-device warning; this does not affect rendering or input. Verification is from PocketHLE's ARM Unicorn emulator on Linux, not a physical Windows Mobile handset.
+The host has no ALSA output device, so niobiumHLE runs silently and logs the expected audio-device warning; this does not affect rendering or input. Verification is from niobiumHLE's ARM Unicorn emulator on Linux, not a physical Windows Mobile handset.
 
 ## Screenshots
 

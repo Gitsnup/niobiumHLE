@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "PocketHLE top-level Emulator: glues loader, CPU, kernel and API stubs."
+description = "niobiumHLE top-level Emulator: glues loader, CPU, kernel and API stubs."
 
 [features]
 default = []

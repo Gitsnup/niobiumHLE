@@ -1,4 +1,4 @@
-package com.pockethle.app
+package com.niobiumhle.app
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
@@ -172,7 +172,7 @@ class GameActivity : AppCompatActivity() {
         }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        val name = intent.getStringExtra(EXTRA_GAME_NAME) ?: "PocketHLE"
+        val name = intent.getStringExtra(EXTRA_GAME_NAME) ?: "niobiumHLE"
         title = name
 
         surface = findViewById(R.id.surface)
@@ -358,7 +358,7 @@ class GameActivity : AppCompatActivity() {
                     if (packed == 0L) Thread.sleep(20)
                 }
                 if (!audioRunning || session != handle || packed == 0L) {
-                    android.util.Log.w("PocketHLE", "Audio format was not announced by the guest")
+                    android.util.Log.w("niobiumHLE", "Audio format was not announced by the guest")
                     return@Thread
                 }
                 val rate = (packed ushr 16).toInt().coerceIn(8000, 48000)
@@ -380,12 +380,12 @@ class GameActivity : AppCompatActivity() {
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
                 if (track?.state != AudioTrack.STATE_INITIALIZED) {
-                    android.util.Log.e("PocketHLE", "AudioTrack was not initialized")
+                    android.util.Log.e("niobiumHLE", "AudioTrack was not initialized")
                     return@Thread
                 }
                 audioTrack = track
                 track.play()
-                android.util.Log.i("PocketHLE", "AudioTrack started: ${rate}Hz, ${channels}ch, buffer=${bufferSize}B")
+                android.util.Log.i("niobiumHLE", "AudioTrack started: ${rate}Hz, ${channels}ch, buffer=${bufferSize}B")
                 while (audioRunning && session == handle) {
                     val pcm = NativeBridge.nativePollAudio(handle, 4096)
                     if (pcm != null && pcm.isNotEmpty()) {
@@ -396,14 +396,14 @@ class GameActivity : AppCompatActivity() {
                     }
                 }
             } catch (error: Throwable) {
-                android.util.Log.e("PocketHLE", "AudioTrack playback failed", error)
+                android.util.Log.e("niobiumHLE", "AudioTrack playback failed", error)
             } finally {
                 try { track?.pause() } catch (_: Throwable) {}
                 try { track?.flush() } catch (_: Throwable) {}
                 try { track?.release() } catch (_: Throwable) {}
                 if (audioTrack === track) audioTrack = null
             }
-        }, "pockethle-audio")
+        }, "niobiumhle-audio")
         audioThread?.start()
     }
 
@@ -1022,8 +1022,8 @@ class GameActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val EXTRA_GAME_ID = "com.pockethle.app.EXTRA_GAME_ID"
-        const val EXTRA_GAME_NAME = "com.pockethle.app.EXTRA_GAME_NAME"
+        const val EXTRA_GAME_ID = "com.niobiumhle.app.EXTRA_GAME_ID"
+        const val EXTRA_GAME_NAME = "com.niobiumhle.app.EXTRA_GAME_NAME"
 
         // Win32 virtual-key codes — same set the desktop GUI uses.
         private const val VK_UP = 0x26

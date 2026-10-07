@@ -1,6 +1,6 @@
 # Test results — Cops & Robbers / Windows Mobile
 
-Verified 2026-09-23 with the supplied `QVGA/Cops_RobbersQVga.cab` on Linux using PocketHLE's ARM Unicorn backend.
+Verified 2026-09-23 with the supplied `QVGA/Cops_RobbersQVga.cab` on Linux using niobiumHLE's ARM Unicorn backend.
 
 ## Regression and launch
 
@@ -22,4 +22,4 @@ Verified 2026-09-23 with the supplied `QVGA/Cops_RobbersQVga.cab` on Linux using
 | Tap helper dry-run, with omitted budget | Passed; no `--message-budget` flag emitted |
 | Tap helper dry-run, explicit `--message-budget 240` | Passed; explicit override emitted |
 
-The game itself was verified in PocketHLE; no physical Windows Mobile handset was available.
+The game itself was verified in niobiumHLE; no physical Windows Mobile handset was available.

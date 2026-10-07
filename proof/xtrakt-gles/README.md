@@ -1,6 +1,6 @@
 # Xtrakt (Xperia X1): OpenGL ES proof
 
-Second game booted through PocketHLE's OpenGL ES 1.x layer, and the
+Second game booted through niobiumHLE's OpenGL ES 1.x layer, and the
 first that needed compressed textures. Xtrakt shipped with the Xperia
 X1, whose Adreno GPU makes ATC the natural texture format — the game
 uploads its entire atlas set as `GL_ATC_RGBA_EXPLICIT_ALPHA_AMD`.
@@ -60,7 +60,7 @@ of the same pixels rather than a separate capture.
 ## On the look of the text
 
 The glyph edges are chunky, and that is the asset rather than the
-decoder. Dumping the atlas with `POCKETHLE_DUMP_TEXTURES=<dir>` shows
+decoder. Dumping the atlas with `NIOBIUMHLE_DUMP_TEXTURES=<dir>` shows
 its alpha channel uses only nine distinct levels — zero, then 136
 through 255 in steps of 17. The 4-bit explicit-alpha nibbles 1 to 7
 never occur anywhere in the 1 MiB block stream, so the atlas simply
@@ -73,7 +73,7 @@ zeroes and is ignored.
 
 ## Debug hooks added along the way
 
-`POCKETHLE_DUMP_TEXTURES=<dir>` writes each uploaded texture as a PPM
+`NIOBIUMHLE_DUMP_TEXTURES=<dir>` writes each uploaded texture as a PPM
 plus a greyscale PPM of its alpha, and the undecoded compressed blocks
 as `.raw`. A wrong compressed-format decode shows up on screen only as
 art that is slightly off, which is near-impossible to judge from a

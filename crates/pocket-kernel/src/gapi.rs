@@ -10,7 +10,7 @@
 //! so a plain `VK_RETURN` press is silently dropped and the game never
 //! leaves its language screen.
 //!
-//! Because of that, the codes below are effectively part of PocketHLE's
+//! Because of that, the codes below are effectively part of niobiumHLE's
 //! ABI: `gx.dll` hands them to the guest, the frontends synthesise them
 //! for the on-screen buttons, and [`remap_host_key`] rewrites the host
 //! keyboard's confirm key into `vkA`. Keeping them in one place is what

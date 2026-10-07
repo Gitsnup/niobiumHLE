@@ -281,7 +281,7 @@ impl PocketLauncher {
             held: HeldButtons::default(),
             pointer_down_at: None,
             running_game: None,
-            status: "Welcome to PocketHLE.".to_string(),
+            status: "Welcome to niobiumHLE.".to_string(),
             config_draft: None,
             game_settings_draft: None,
             last_frame_texture: None,
@@ -336,7 +336,7 @@ impl PocketLauncher {
         if let Some(tex) = self.last_frame_texture.as_mut() {
             tex.set(img, egui::TextureOptions::NEAREST);
         } else {
-            let tex = ctx.load_texture("pockethle-fb", img, egui::TextureOptions::NEAREST);
+            let tex = ctx.load_texture("niobiumhle-fb", img, egui::TextureOptions::NEAREST);
             self.last_frame_texture = Some(tex);
         }
         self.frame_stats.record_frame();
@@ -351,7 +351,7 @@ impl PocketLauncher {
 
     fn ui_top_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            ui.heading("PocketHLE");
+            ui.heading("niobiumHLE");
             ui.label(
                 RichText::new("Pocket PC / Windows Mobile launcher")
                     .small()

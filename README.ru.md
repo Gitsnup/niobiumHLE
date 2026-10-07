@@ -1,4 +1,4 @@
-# PocketHLE
+# niobiumHLE
 
 > Высокоуровневый эмулятор (HLE) игр для Windows Mobile / Pocket PC.
 > Архитектура и стиль кода вдохновлены проектами
@@ -7,7 +7,7 @@
 > Интерфейс лаунчера сделан в стиле
 > [j2me-loader](https://github.com/nikita36078/j2me-loader).
 
-PocketHLE не пытается эмулировать целое ядро Windows CE. Вместо этого, как
+niobiumHLE не пытается эмулировать целое ядро Windows CE. Вместо этого, как
 и `touchHLE`, эмулятор загружает реальный игровой `.exe`, запускает ARM-код
 в эмуляторе процессора и реализует системные DLL (`coredll`, `aygshell`,
 `gx`, `hss`...) на стороне хоста. Игра «думает», что она работает на
@@ -26,7 +26,7 @@ Windows CE 5 GUI). Реализованные API соответствуют т�
 
 ## Gizmondo
 
-PocketHLE теперь поддерживает образы игровых карт Gizmondo и автоматически выбирает экран консоли 320×240 в альбомной ориентации. Проверенные игры перечислены в [списке работающих игр Gizmondo](proof/List%20of%20Gizmondo%20working%20games.md).
+niobiumHLE теперь поддерживает образы игровых карт Gizmondo и автоматически выбирает экран консоли 320×240 в альбомной ориентации. Проверенные игры перечислены в [списке работающих игр Gizmondo](proof/List%20of%20Gizmondo%20working%20games.md).
 
 ## Проверенные игры
 
@@ -40,8 +40,8 @@ PocketHLE теперь поддерживает образы игровых ка
 
 | Платформа | Артефакт                              | Бэкенд CPU      |
 |-----------|---------------------------------------|-----------------|
-| Linux     | `pockethle`, `pockethle-gui` (egui)   | stub / ARM / MIPS Unicorn |
-| Windows   | `pockethle.exe`, `pockethle-gui.exe`  | stub / ARM / MIPS Unicorn |
+| Linux     | `niobiumhle`, `niobiumhle-gui` (egui)   | stub / ARM / MIPS Unicorn |
+| Windows   | `niobiumhle.exe`, `niobiumhle-gui.exe`  | stub / ARM / MIPS Unicorn |
 | Android   | APK (arm64-v8a, armeabi-v7a)          | stub / ARM / MIPS Unicorn |
 
 CI собирает артефакты для всех трёх платформ — как у touchHLE.
@@ -68,12 +68,12 @@ cargo test --workspace
 
 Бинарники появятся в `target/release/`:
 
-- `pockethle` — командная строка (`pe-info`, `unpack-cab`, `inspect-cab`, `run`...).
-- `pockethle-gui` — десктопный GUI (egui) с библиотекой игр и настройками.
+- `niobiumhle` — командная строка (`pe-info`, `unpack-cab`, `inspect-cab`, `run`...).
+- `niobiumhle-gui` — десктопный GUI (egui) с библиотекой игр и настройками.
 
 ## Сборка на Windows
 
-PocketHLE собирается «из коробки» на Windows с MSVC-toolchain (так же
+niobiumHLE собирается «из коробки» на Windows с MSVC-toolchain (так же
 распространяется и сам touchHLE).
 
 ```powershell
@@ -89,8 +89,8 @@ cargo build --release -p pocket-cli      --features unicorn
 cargo build --release -p pocket-desktop  --features unicorn
 ```
 
-Результат — `target\release\pockethle.exe` и
-`target\release\pockethle-gui.exe`. Двойной клик на `pockethle-gui.exe`
+Результат — `target\release\niobiumhle.exe` и
+`target\release\niobiumhle-gui.exe`. Двойной клик на `niobiumhle-gui.exe`
 открывает окно лаунчера: импортируйте `.CAB`, выберите игру в библиотеке
 и нажмите Run.
 
@@ -145,17 +145,17 @@ APK окажется в
 ```
 
 На Linux/Windows по умолчанию это
-`~/.local/share/PocketHLE/library`. На Android —
+`~/.local/share/niobiumHLE/library`. На Android —
 `getExternalFilesDir(null)/library` внутри песочницы приложения.
 
 ## Запуск JumpyBall
 
 # Просмотр содержимого CAB:
-pockethle inspect-cab ~/JumpyBallPPC.cab
+niobiumhle inspect-cab ~/JumpyBallPPC.cab
 
 # Или распаковка вручную и запуск через Unicorn:
-pockethle unpack-cab ~/JumpyBallPPC.cab /tmp/jumpy
-pockethle -v run /tmp/jumpy/JUMPYB~1.002 \
+niobiumhle unpack-cab ~/JumpyBallPPC.cab /tmp/jumpy
+niobiumhle -v run /tmp/jumpy/JUMPYB~1.002 \
     --cpu unicorn --max-slices 200 --instructions-per-slice 100000
 
 Для MIPS-игры используйте `--cpu mips`. Для ARM — `--cpu unicorn`. Чтобы
@@ -165,7 +165,7 @@ pockethle -v run /tmp/jumpy/JUMPYB~1.002 \
 ```bash
 python3 tools/ai-tap-sequence.py /path/to/game.exe \
     --cpu mips --tap 120,210 --tap 120,250 \
-    --dump-frames-to /tmp/pockethle-frames --max-frames 3
+    --dump-frames-to /tmp/niobiumhle-frames --max-frames 3
 ```
 
 `tools/ai-tap-sequence.py` не угадывает кнопки сам: другая ИИ-программа
@@ -190,11 +190,11 @@ API — это маленький pull request на пару десятков с
 
 ## Исполняемые файлы .NET Compact Framework
 
-Текущий backend PocketHLE запускает нативные ARM PE-файлы Windows CE. Управляемые сборки `.NET Compact Framework` пока не исполняются: им нужны CLR/Compact Framework runtime и управляемый слой WinForms/GDI+, а не только заглушки нативных WinCE API.
+Текущий backend niobiumHLE запускает нативные ARM PE-файлы Windows CE. Управляемые сборки `.NET Compact Framework` пока не исполняются: им нужны CLR/Compact Framework runtime и управляемый слой WinForms/GDI+, а не только заглушки нативных WinCE API.
 
 Загрузчик теперь определяет CLR-метаданные и сообщает версию runtime, вместо того чтобы запускать managed PE как нативный ARM-код. Переданный `PocketSnake.exe` — x86 managed-сборка с CLR metadata `v1.1.4322`, а не нативный ARM WinCE executable. Для запуска ей нужен Windows Mobile 2003 или более новый совместимый Windows Mobile с установленным .NET Compact Framework 1.1; на более ранней Windows CE она также будет работать только при заранее установленном совместимом runtime.
 
-Полезные open-source примеры аналогичной структуры Compact Framework: [Pocket1945](https://github.com/timdetering/Pocket1945), [Pocket-Minesweeper](https://github.com/Enovale/Pocket-Minesweeper) и [SokobanCompact](https://github.com/OverQuantum/SokobanCompact). Они показывают managed startup, загрузку ресурсов, timer-driven обновления и WinForms painting, но не являются нативными ARM-образами, которые можно напрямую загрузить текущим PocketHLE.
+Полезные open-source примеры аналогичной структуры Compact Framework: [Pocket1945](https://github.com/timdetering/Pocket1945), [Pocket-Minesweeper](https://github.com/Enovale/Pocket-Minesweeper) и [SokobanCompact](https://github.com/OverQuantum/SokobanCompact). Они показывают managed startup, загрузку ресурсов, timer-driven обновления и WinForms painting, но не являются нативными ARM-образами, которые можно напрямую загрузить текущим niobiumHLE.
 
 ## Лицензия
 

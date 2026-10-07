@@ -3,7 +3,7 @@
 //! A `.xap` is a ZIP archive whose payload is *managed IL*: the game
 //! ships as .NET assemblies (`<entry>.dll` plus satellites) with XNA
 //! content compiled to `.xnb` resources, and `WMAppManifest.xml` /
-//! `AppManifest.xaml` describe the package. PocketHLE runs managed
+//! `AppManifest.xaml` describe the package. niobiumHLE runs managed
 //! images through a host runtime (see `pocket-cli/src/managed.rs`),
 //! so the loader's job here is only to identify the package and pick
 //! the entry-point assembly.

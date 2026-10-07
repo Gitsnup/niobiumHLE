@@ -1,7 +1,7 @@
-package com.pockethle.app
+package com.niobiumhle.app
 
 /**
- * Thin Kotlin facade around the Rust JNI library `libpockethle_jni.so`.
+ * Thin Kotlin facade around the Rust JNI library `libniobiumhle_jni.so`.
  *
  * Most native methods take the absolute path of the library root as
  * their first argument and return a JSON-encoded string. JSON is
@@ -17,7 +17,7 @@ package com.pockethle.app
  */
 object NativeBridge {
     init {
-        System.loadLibrary("pockethle_jni")
+        System.loadLibrary("niobiumhle_jni")
     }
 
     @JvmStatic external fun banner(): String

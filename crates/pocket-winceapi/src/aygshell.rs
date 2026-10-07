@@ -64,7 +64,7 @@ pub fn register(d: &mut WinCeDispatcher) {
     // shows up in the leaked WM 2003 lib (`aygshell.lib`) as the
     // helper that maps to "give the menu bar adornment about an
     // edit/menu split" — i.e. a PPC-style SHFullScreen variant.
-    // PocketHLE has no real shell, so just succeeding is enough to
+    // niobiumHLE has no real shell, so just succeeding is enough to
     // get past the call site.
     // 341 / 344 are the ordinals Gameloft's SDL port (Sonic Unleashed)
     // imports for its full-screen / task-bar handling.
@@ -265,7 +265,7 @@ fn sh_create_menu_bar(ctx: &mut CallCtx<'_>) -> Result<DispatchOutcome, KernelEr
 
 /// `SHSipInfo(dwAction, uParam, pvParam, fWinIni)`.
 ///
-/// The SIP is never visible under PocketHLE, so report a panel that is
+/// The SIP is never visible under niobiumHLE, so report a panel that is
 /// off and takes no screen space: `fdwFlags` clear, `rcVisibleDesktop`
 /// the whole framebuffer, `rcSipRect` empty. Solitaire reads the flags
 /// back, flips `SIPF_ON`, and calls in again with `SPI_SETSIPINFO`;
