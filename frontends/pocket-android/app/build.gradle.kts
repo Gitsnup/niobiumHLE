@@ -19,9 +19,32 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // Stable signing key so every build upgrades in place instead of
+            // demanding an uninstall. Committed for this personal fork; the
+            // env vars let CI or a fork override it without editing this file.
+            val ksFile = file("../keystore/niobiumhle.keystore")
+            storeFile = if (System.getenv("NIOBIUMHLE_KEYSTORE") != null) {
+                file(System.getenv("NIOBIUMHLE_KEYSTORE"))
+            } else {
+                ksFile
+            }
+            storePassword = System.getenv("NIOBIUMHLE_KEYSTORE_PASS") ?: "niobiumhle-key"
+            keyAlias = "niobiumhle"
+            keyPassword = System.getenv("NIOBIUMHLE_KEY_PASS") ?: "niobiumhle-key"
+        }
+    }
+
     buildTypes {
+        debug {
+            // CI runners regenerate ~/.android/debug.keystore per run, which
+            // broke upgrades between builds. Sign debug with the stable key.
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
