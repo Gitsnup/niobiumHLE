@@ -356,6 +356,14 @@ non-zero pixels sitting in the framebuffer the whole time. Only
 `--dump-frame-stride` thins the captures of a GDI title that legitimately
 blits far more often than it changes anything interesting.
 
+The desktop Run screen's **Game-only fullscreen** action is a presentation
+mode, not a guest screen-size change. It requests a fullscreen host viewport, hides the
+launcher panels, virtual controls, status, and FPS overlay, then centers the
+rotated framebuffer at the largest aspect-preserving size that fits. Pointer
+input still maps through the same inverse rotation. F11 exits and restores the
+fullscreen state from before the mode; outside it, F11 keeps toggling ordinary
+borderless fullscreen.
+
 Two rasterizer details that look like bugs and are not: an incomplete
 texture samples as opaque white (matching GL ES), and the software GL
 tests share a `TEST_LOCK` because the context is process-global.

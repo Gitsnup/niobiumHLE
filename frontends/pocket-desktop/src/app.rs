@@ -31,6 +31,8 @@ pub struct PocketLauncher {
     library: Library,
     selected_game: Option<String>,
     screen: Screen,
+    game_only_fullscreen: bool,
+    fullscreen_before_game_only: Option<bool>,
     runner: Runner,
     events_rx: Receiver<UiEvent>,
     events_tx: Sender<UiEvent>,
@@ -106,6 +108,16 @@ fn rotation_uv(rotation: RotationPref) -> [Pos2; 4] {
             egui::pos2(0.0, 1.0),
         ],
     }
+}
+
+fn fullscreen_frame_rect(bounds: Rect, size: Vec2, rotation: RotationPref) -> Rect {
+    let frame_size = if rotation.is_quarter_turn() {
+        Vec2::new(size.y, size.x)
+    } else {
+        size
+    };
+    let scale = (bounds.width() / frame_size.x).min(bounds.height() / frame_size.y);
+    Rect::from_center_size(bounds.center(), frame_size * scale)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -273,6 +285,8 @@ impl PocketLauncher {
             icon_cache: std::collections::HashMap::new(),
             selected_game: None,
             screen: Screen::Library,
+            game_only_fullscreen: false,
+            fullscreen_before_game_only: None,
             runner: Runner::new(),
             events_rx: rx,
             events_tx: tx,
@@ -305,6 +319,9 @@ impl PocketLauncher {
                 }
                 UiEvent::RunFinished(outcome) => {
                     self.last_frame_status = Some(outcome.summary.clone());
+                    if self.game_only_fullscreen {
+                        self.set_game_only_fullscreen(ctx, false);
+                    }
                     if let Some(frame) = outcome.framebuffer {
                         self.upload_frame_texture(ctx, &frame);
                     }
@@ -855,6 +872,13 @@ impl PocketLauncher {
                 ui.ctx()
                     .send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
             }
+            if ui
+                .button("Game-only fullscreen")
+                .on_hover_text("Show only the centered game. Press F11 to return.")
+                .clicked()
+            {
+                self.set_game_only_fullscreen(ui.ctx(), true);
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("Back to library").clicked() {
                     // Best-effort — if the runner thread already
@@ -894,10 +918,8 @@ impl PocketLauncher {
             return;
         };
         let size = tex.size_vec2();
-        // Display at 2x for readability, the same way the CLI's
-        // minifb DisplayHook scales — but never larger than the space
-        // egui actually gave us. A 480x800 WVGA game at a fixed 2x is
-        // 960x1600 and would run off the bottom of a 1080p window.
+        // Keep the normal Run-screen preview at 2x unless it would
+        // exceed the space shared with the virtual control pad.
         let available = ui.available_size();
         let rotated_size = if self.game_rotation.is_quarter_turn() {
             Vec2::new(size.y, size.x)
@@ -910,6 +932,28 @@ impl PocketLauncher {
             .max(0.1);
         let display_size = rotated_size * scale;
         let (rect, _response) = ui.allocate_exact_size(display_size, Sense::click_and_drag());
+        self.paint_game_texture(ui, &tex, rect, size, true);
+    }
+
+    fn ui_game_only(&mut self, ui: &mut egui::Ui) {
+        let bounds = ui.max_rect();
+        ui.painter().rect_filled(bounds, 0.0, Color32::BLACK);
+        let Some(tex) = self.last_frame_texture.clone() else {
+            return;
+        };
+        let size = tex.size_vec2();
+        let rect = fullscreen_frame_rect(bounds, size, self.game_rotation);
+        self.paint_game_texture(ui, &tex, rect, size, false);
+    }
+
+    fn paint_game_texture(
+        &mut self,
+        ui: &mut egui::Ui,
+        tex: &egui::TextureHandle,
+        rect: Rect,
+        size: Vec2,
+        show_fps: bool,
+    ) {
         let uv = rotation_uv(self.game_rotation);
         let mut mesh = Mesh::with_texture(tex.id());
         let idx = mesh.vertices.len() as u32;
@@ -928,11 +972,7 @@ impl PocketLauncher {
         mesh.indices
             .extend_from_slice(&[idx, idx + 1, idx + 2, idx + 2, idx + 1, idx + 3]);
         ui.painter().add(egui::Shape::mesh(mesh));
-        // The j2me-loader-style FPS overlay is opt-in: gated on the
-        // launcher's `show_fps` config flag so users who find a
-        // permanent debug HUD distracting can switch it off in
-        // Settings.
-        if self.library.config().show_fps {
+        if show_fps && self.library.config().show_fps {
             let overlay_rect =
                 Rect::from_min_size(rect.min + Vec2::new(6.0, 6.0), Vec2::new(390.0, 24.0));
             ui.painter()
@@ -1098,6 +1138,21 @@ impl PocketLauncher {
         }
     }
 
+    fn set_game_only_fullscreen(&mut self, ctx: &egui::Context, enabled: bool) {
+        if self.game_only_fullscreen == enabled {
+            return;
+        }
+        self.game_only_fullscreen = enabled;
+        if enabled {
+            let fullscreen = ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
+            self.fullscreen_before_game_only = Some(fullscreen);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+        } else {
+            let fullscreen = self.fullscreen_before_game_only.take().unwrap_or(false);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(fullscreen));
+        }
+    }
+
     fn handle_physical_keyboard(&mut self, ctx: &egui::Context) {
         if self.screen != Screen::Run {
             return;
@@ -1114,8 +1169,13 @@ impl PocketLauncher {
                 continue;
             };
             if key == egui::Key::F11 && pressed && !repeat {
-                let fullscreen = ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
-                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
+                if self.game_only_fullscreen {
+                    self.set_game_only_fullscreen(ctx, false);
+                } else {
+                    let fullscreen =
+                        ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(!fullscreen));
+                }
                 continue;
             }
             let Some(vk) = self.library.config().keybindings.vk_for_key(key.name()) else {
@@ -1277,25 +1337,31 @@ impl eframe::App for PocketLauncher {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_physical_keyboard(ctx);
         self.drain_events(ctx);
-        egui::TopBottomPanel::top("top").show(ctx, |ui| self.ui_top_bar(ui));
-        egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(&self.status).small());
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(
-                        RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
-                            .small()
-                            .color(Color32::from_gray(140)),
-                    );
+        if self.game_only_fullscreen && self.screen == Screen::Run {
+            egui::CentralPanel::default()
+                .frame(egui::Frame::none())
+                .show(ctx, |ui| self.ui_game_only(ui));
+        } else {
+            egui::TopBottomPanel::top("top").show(ctx, |ui| self.ui_top_bar(ui));
+            egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(&self.status).small());
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(
+                            RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
+                                .small()
+                                .color(Color32::from_gray(140)),
+                        );
+                    });
                 });
             });
-        });
-        egui::CentralPanel::default().show(ctx, |ui| match self.screen {
-            Screen::Library => self.ui_library(ui),
-            Screen::Settings => self.ui_settings(ui),
-            Screen::GameSettings => self.ui_game_settings(ui),
-            Screen::Run => self.ui_run(ui),
-        });
+            egui::CentralPanel::default().show(ctx, |ui| match self.screen {
+                Screen::Library => self.ui_library(ui),
+                Screen::Settings => self.ui_settings(ui),
+                Screen::GameSettings => self.ui_game_settings(ui),
+                Screen::Run => self.ui_run(ui),
+            });
+        }
         // While a game is running we want to drain the live frame
         // channel as fast as the runner produces frames; the original
         // 250 ms cadence capped the launcher at 4 fps, which is most
@@ -1445,5 +1511,17 @@ mod tests {
         let (x, y) =
             rotated_pointer_to_game(Vec2::new(0.0, 0.0), display, game, RotationPref::None);
         assert_eq!((x, y), (0, 0));
+    }
+
+    #[test]
+    fn game_only_fullscreen_centers_and_fits_the_rotated_game_frame() {
+        let bounds = Rect::from_min_size(Pos2::new(100.0, 50.0), Vec2::new(1920.0, 1080.0));
+        let portrait = fullscreen_frame_rect(bounds, Vec2::new(240.0, 320.0), RotationPref::None);
+        let landscape = fullscreen_frame_rect(bounds, Vec2::new(240.0, 320.0), RotationPref::Cw90);
+
+        assert_eq!(portrait.center(), bounds.center());
+        assert_eq!(portrait.size(), Vec2::new(810.0, 1080.0));
+        assert_eq!(landscape.center(), bounds.center());
+        assert_eq!(landscape.size(), Vec2::new(1440.0, 1080.0));
     }
 }
