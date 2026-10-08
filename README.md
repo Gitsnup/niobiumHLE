@@ -71,7 +71,11 @@ niobiumHLE can currently:
 * run a shared game library with per-game settings on desktop and Android;
 * build Linux, Windows and Android artifacts through GitHub Actions.
 
-The current reference proof demonstrates Asphalt 4 rendering at WVGA with captured PCM audio. Android also has a game launcher, fullscreen/orientation controls, display modes, per-game settings and a turbo control for titles that need accelerated startup.
+The current reference proof demonstrates Asphalt 4 rendering at WVGA with
+captured PCM audio. The desktop Run screen also offers game-only fullscreen,
+with F11 returning to the emulator controls. Android has a game launcher,
+fullscreen/orientation controls, display modes, per-game settings and a turbo
+control for titles that need accelerated startup.
 
 niobiumHLE is not a full Windows CE emulator. Some games still stop during CRT initialization, dynamic imports, worker-thread setup or unimplemented APIs. A successful boot or first frame does not automatically mean that an entire game is playable from start to finish.
 
